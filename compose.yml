@@ -30,4 +30,4 @@ services:
 
 volumes:
   redis_data:
-    name: lcr-redis-data
+    name: ${REDIS_VOLUME_NAME:-lcr-redis-data}
