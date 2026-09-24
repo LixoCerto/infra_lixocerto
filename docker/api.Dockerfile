@@ -8,7 +8,9 @@ RUN pnpm install --frozen-lockfile
 
 FROM dependencias AS compilacao
 WORKDIR /app
-COPY . .
+COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.compilacao.json buf.yaml buf.gen.yaml configuracao_sequelize.cjs ./
+COPY contratos ./contratos
+COPY src ./src
 RUN pnpm contratos:validar && pnpm compilar
 
 FROM node:22-bookworm-slim AS runtime

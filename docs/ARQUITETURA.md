@@ -4,31 +4,40 @@
 
 | Projeto | Responsabilidade | Docker próprio |
 |---|---|---:|
-| `api_lixocerto` | API gRPC, migrations, regras de negócio e integração com PostgreSQL/Redis | Não |
-| `frontend_lixocerto` | Interface web e cliente gRPC-Web/Connect | Não |
-| `infra_lixocerto` | Dockerfiles, Compose, Redis local e operação dos containers | Sim |
+| `api_lixocerto` | API gRPC, migrations, regras de negócio, PostgreSQL e Redis | Não |
+| `frontend_lixocerto` | Interface React/Vite estática, OIDC/PKCE e cliente gRPC-Web | Não |
+| `infra_lixocerto` | Dockerfiles, Compose, Envoy, Redis local e operação | Sim |
 
 ## Imagens
 
-O projeto de infraestrutura possui dois Dockerfiles multi-stage:
+- `docker/api.Dockerfile`: compila a API NestJS e inicia `dist/src/principal.js` como usuário não-root na porta `50051`;
+- `docker/frontend.Dockerfile`: compila o frontend Vite e entrega o diretório `dist` pelo Nginx unprivileged na porta `8080`;
+- `envoyproxy/envoy`: recebe gRPC-Web na porta `8080`, aplica CORS e encaminha HTTP/2 para a API gRPC.
 
-- `docker/api.Dockerfile`: compila a API NestJS, copia contratos Protobuf para o runtime e inicia `dist/src/principal.js` como usuário não-root na porta `50051`;
-- `docker/frontend.Dockerfile`: compila o frontend Vite/Express, inicia `dist/index.js` como usuário não-root na porta `3000`.
+Os contextos de build são os diretórios irmãos das aplicações. Os Dockerfiles fazem cópia explícita dos diretórios necessários, impedindo que `.env` e artefatos locais entrem nas imagens.
 
-Os contextos de build são os diretórios irmãos das aplicações. Os arquivos `*.Dockerfile.dockerignore` ficam junto aos Dockerfiles para excluir dependências, builds, logs e ambientes locais sem colocar artefatos Docker nos projetos de aplicação.
+## Fluxo
 
-## Dependências
-
-A API usa o PostgreSQL externo informado em `URL_BANCO_DADOS` e o Redis local iniciado pelo Compose. O frontend é servido pelo container Node e não recebe credenciais do banco PostgreSQL da API.
+```text
+navegador :3000
+    ↓ HTTP estático e /api/rpc
+frontend Nginx :8080
+    ↓ gRPC-Web
+Envoy :8080
+    ↓ gRPC/HTTP2
+API :50051
+    ├── PostgreSQL externo
+    └── Redis :6379
+```
 
 ## Perfis
 
-Sem perfil, o Compose inicia somente o Redis. Com `--profile app`, inicia Redis, API e frontend, mantendo as portas locais `50051` e `3000` vinculadas a loopback.
+Sem perfil, o Compose inicia somente o Redis. Com `--profile app`, inicia Redis, API, gateway e frontend; as portas publicadas permanecem vinculadas ao loopback local.
 
 ## Princípios operacionais
 
-O Redis exige senha, habilita AOF, mantém volume nomeado, usa healthcheck, reinício automático, limite de logs e redução de capabilities do container. API e frontend usam imagens multi-stage e usuários não-root. O projeto de infraestrutura não contém senhas reais, dumps de banco nem arquivos de ambiente versionados.
+O Redis exige senha, habilita AOF, mantém volume nomeado, usa healthcheck, reinício automático e limite de logs. A API e o Nginx usam imagens multi-stage. O projeto não contém PostgreSQL, senhas reais, dumps, tokens ou arquivos de ambiente versionados.
 
 ## Limites
 
-O projeto não executa migrations automaticamente, não contém o PostgreSQL externo, não publica portas públicas e não armazena segredos. A preparação do banco remoto deve ser feita pelo administrador da infraestrutura correspondente.
+O projeto não executa migrations automaticamente, não publica portas públicas e não armazena segredos. A preparação do banco remoto e o cadastro das URLs OIDC devem ser feitos pelo administrador responsável.
