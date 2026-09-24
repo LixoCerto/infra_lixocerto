@@ -1,3 +1,5 @@
+name: lixo-certo
+
 services:
   cache:
     image: redis:7.4-alpine
@@ -26,6 +28,61 @@ services:
       driver: json-file
       options:
         max-size: 10m
+        max-file: "3"
+
+  api:
+    profiles: ["app"]
+    build:
+      context: ${API_CONTEXT:-../api_lixocerto}
+      dockerfile: ${API_DOCKERFILE:-../infra_lixocerto/docker/api.Dockerfile}
+    container_name: lcr-api
+    restart: unless-stopped
+    env_file:
+      - ${API_ENV_FILE:-../api_lixocerto/.env}
+    environment:
+      AMBIENTE_EXECUCAO: ${AMBIENTE_EXECUCAO:-desenvolvimento}
+      PORTA_GRPC: "50051"
+      URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
+      URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
+    depends_on:
+      cache:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT:-50051}:50051"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"
+
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ${FRONTEND_CONTEXT:-../frontend_lixocerto}
+      dockerfile: ${FRONTEND_DOCKERFILE:-../infra_lixocerto/docker/frontend.Dockerfile}
+    container_name: lcr-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: ${FRONTEND_DATABASE_URL:-}
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
         max-file: "3"
 
 volumes:

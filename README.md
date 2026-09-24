@@ -1,80 +1,131 @@
 # Infra Lixo Certo
 
-Projeto responsável pela infraestrutura Docker de desenvolvimento do ecossistema Lixo Certo. A API e o frontend não mantêm mais Compose, Dockerfile ou gestão de containers próprios.
+Projeto responsável pela infraestrutura Docker de desenvolvimento do ecossistema Lixo Certo. A API e o frontend não mantêm Dockerfiles próprios; as imagens e a orquestração ficam centralizadas aqui.
 
-## Escopo
+## Estrutura
 
-Este projeto gerencia exclusivamente o Redis local usado pela API. O PostgreSQL da aplicação é externo e permanece configurado no `.env` da API por meio de `URL_BANCO_DADOS`. Nenhum banco externo é criado, destruído ou migrado por este Compose.
+```text
+infra_lixocerto/
+├── compose.yml
+├── docker/
+│   ├── api.Dockerfile
+│   ├── api.Dockerfile.dockerignore
+│   ├── frontend.Dockerfile
+│   └── frontend.Dockerfile.dockerignore
+├── scripts/
+└── docs/
+```
+
+Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixocerto`. Assim, os Dockerfiles permanecem neste repositório sem duplicar arquivos de infraestrutura nos projetos de aplicação.
+
+## Responsabilidades
+
+- `cache`: Redis local protegido por senha, AOF, volume persistente e healthcheck;
+- `api`: imagem multi-stage da API NestJS gRPC, executada como usuário não-root;
+- `frontend`: imagem multi-stage do servidor Node de produção do frontend, executada como usuário não-root;
+- PostgreSQL: banco externo, configurado no `.env` da API e nunca criado por este Compose.
 
 ## Pré-requisitos
 
 - Docker Desktop com Docker Compose v2;
-- API Lixo Certo clonada ao lado deste projeto;
-- Credenciais do Redis somente no arquivo `.env` local.
+- os três projetos clonados como pastas irmãs:
+
+```text
+G:\LixoCerto\infra_lixocerto
+G:\LixoCerto\api_lixocerto
+G:\LixoCerto\frontend_lixocerto
+```
+
+- `.env` real da API contendo o PostgreSQL externo;
+- senha local do Redis somente no `.env` desta infraestrutura.
 
 ## Configuração
 
 No PowerShell:
 
 ```powershell
+cd G:\LixoCerto\infra_lixocerto
 Copy-Item .env.exemplo .env
 notepad .env
 ```
 
-Defina uma senha local forte em `REDIS_PASSWORD`. O arquivo `.env` é ignorado pelo Git.
+Defina `REDIS_PASSWORD`. O arquivo real é ignorado pelo Git.
 
-## Operação
+## Perfis de execução
+
+### Somente Redis
 
 ```powershell
-# Iniciar o Redis
+docker compose --env-file .env -f compose.yml up -d cache
+docker compose --env-file .env -f compose.yml ps
+```
+
+### Redis e aplicações em containers
+
+```powershell
+docker compose --env-file .env -f compose.yml --profile app up -d --build
+```
+
+Esse perfil:
+
+1. inicia o Redis;
+2. aguarda o healthcheck do Redis;
+3. constrói e inicia a API na porta `50051`;
+4. inicia o frontend na porta `3000`.
+
+A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente e mantém `URL_BANCO_DADOS` vindo do arquivo `.env` da API, apontando para o PostgreSQL externo.
+
+### Scripts PowerShell
+
+```powershell
 .\scripts\iniciar.ps1
-
-# Conferir saúde e portas
 .\scripts\status.ps1
-
-# Acompanhar logs
 .\scripts\logs.ps1
-
-# Parar sem remover dados
 .\scripts\parar.ps1
 ```
 
-Comandos equivalentes:
+Para iniciar também API e frontend:
 
 ```powershell
-docker compose --env-file .env -f .\compose.yml up -d
-docker compose --env-file .env -f .\compose.yml ps
-docker compose --env-file .env -f .\compose.yml exec -T cache redis-cli -a $env:REDIS_PASSWORD ping
-docker compose --env-file .env -f .\compose.yml stop
-docker compose --env-file .env -f .\compose.yml logs -f --tail=100 cache
+.\scripts\iniciar.ps1 -Aplicacao
 ```
 
-A porta fica vinculada somente a `127.0.0.1`, e o volume persistente chama-se `lcr-redis-data`. Para destruir deliberadamente os dados locais:
+## Parada e limpeza
+
+Parar sem remover dados:
 
 ```powershell
-docker compose --env-file .env -f .\compose.yml down -v
+docker compose --env-file .env -f compose.yml stop
 ```
 
-## Integração com a API
+Remover containers e rede, preservando o Redis:
 
-Na API, mantenha o PostgreSQL externo e a URL do Redis local protegida por senha:
+```powershell
+docker compose --env-file .env -f compose.yml down
+```
+
+Remover deliberadamente o volume Redis:
+
+```powershell
+docker compose --env-file .env -f compose.yml down -v
+```
+
+## Segurança
+
+- portas vinculadas somente a `127.0.0.1`;
+- Redis exige senha;
+- containers usam `no-new-privileges`;
+- capabilities são removidas;
+- processos da API e frontend usam usuário não-root;
+- arquivos `.env`, tokens, chaves e dados persistentes não são versionados;
+- o Dockerfile-specific ignore exclui dependências, builds, logs e segredos dos contextos.
+
+## PostgreSQL externo
+
+O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. A API usa, no próprio arquivo de ambiente:
 
 ```env
 URL_BANCO_DADOS=postgres://postgres:SENHA_CODIFICADA@177.223.51.10:5432/lixocerto
-URL_REDIS=redis://:SENHA_REDIS@127.0.0.1:6379
-URL_REDIS_TESTE=redis://:SENHA_REDIS@127.0.0.1:6379/15
 ```
 
-A senha do Redis deve ser codificada na URL quando possuir caracteres reservados. Não copie a senha do `.env` para o GitHub, Postman, frontend ou logs.
-
-## Ordem de inicialização
-
-```text
-infra_lixocerto: Redis local
-        ↓
-api_lixocerto: PostgreSQL externo + Redis local
-        ↓
-frontend_lixocerto: cliente web
-```
-
-O PostgreSQL externo não é administrado por este projeto. Migrations e seeds continuam sendo comandos explícitos da API e devem ser executados somente quando o banco remoto estiver preparado.
+Antes de executar migrations, confirme que o banco remoto está preparado e possui as extensões necessárias. Não execute testes de integração contra o banco principal.

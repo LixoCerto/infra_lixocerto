@@ -5,7 +5,7 @@ if (-not (Test-Path -LiteralPath '.env')) {
     throw 'Arquivo .env não encontrado. Execute iniciar.ps1 primeiro.'
 }
 
-$compose = @('--env-file', '.env', '-f', 'compose.yml')
+$compose = @('--env-file', '.env', '-f', 'compose.yml', '--profile', 'app')
 docker compose @compose ps
 if ($LASTEXITCODE -ne 0) { throw 'Não foi possível consultar o Compose.' }
 
