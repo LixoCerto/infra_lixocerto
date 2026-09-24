@@ -1,0 +1,11 @@
+# Segredos locais
+.env
+.env.*
+!.env.exemplo
+
+# Dados e artefatos Docker
+*.tar
+*.dump
+*.sql.gz
+.DS_Store
+Thumbs.db
