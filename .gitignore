@@ -3,6 +3,11 @@
 .env.*
 !.env.exemplo
 
+# Dependências e artefatos Node
+node_modules/
+pnpm-debug.log*
+reports/
+
 # Dados e artefatos Docker
 *.tar
 *.dump

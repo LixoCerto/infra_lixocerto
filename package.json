@@ -1,0 +1,18 @@
+{
+  "name": "infra-lixo-certo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke:grpc": "node tools/grpc-smoke.mjs --report reports/grpc-smoke.json",
+    "smoke:grpc:json": "node tools/grpc-smoke.mjs --format json",
+    "prepare:postman": "powershell -ExecutionPolicy Bypass -File scripts/preparar-postman.ps1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.7.13"
+  }
+}

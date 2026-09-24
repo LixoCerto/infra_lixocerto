@@ -115,3 +115,13 @@ docker compose --env-file .env -f compose.yml down -v
 - os Dockerfiles copiam somente os diretórios necessários para evitar incluir ambientes locais.
 
 O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes de integração contra o banco principal.
+
+## Automação híbrida
+
+Para subir o ambiente, aguardar os healthchecks, preparar os contratos no diretório de trabalho do Postman e executar os smoke tests gRPC públicos em uma única operação:
+
+```powershell
+.\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
+```
+
+O runner cria `reports\grpc-smoke.json` e valida saúde, materiais, pontos de coleta, questões e ranking. O Postman continua disponível para inspeção visual e chamadas autenticadas, mas a validação básica não depende da interface do Postman. Consulte [docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md) para o fluxo completo.
