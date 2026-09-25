@@ -27,5 +27,7 @@ if ($LASTEXITCODE -ne 0) {
 
 pnpm smoke:grpc:auth
 if ($LASTEXITCODE -ne 0) {
-    throw 'Smoke autenticado falhou. Verifique o realm Keycloak, o usuário administrador e as permissões LCR.'
+    Write-Host 'Diagnóstico seguro da API:' -ForegroundColor Yellow
+    docker logs lcr-api --tail 120 2>&1 | Select-String 'falha_validacao_jwt' | ForEach-Object { Write-Host $_ }
+    throw 'Smoke autenticado falhou. Verifique o diagnóstico acima, o realm Keycloak e as permissões LCR.'
 }
