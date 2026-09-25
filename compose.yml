@@ -45,6 +45,7 @@ services:
     environment:
       AMBIENTE_EXECUCAO: ${AMBIENTE_EXECUCAO:-desenvolvimento}
       PORTA_GRPC: "50051"
+      HABILITAR_REFLECTION_GRPC: ${HABILITAR_REFLECTION_GRPC:-true}
       URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
       URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}

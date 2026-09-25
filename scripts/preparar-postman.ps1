@@ -24,11 +24,31 @@ $postmanDocs = Join-Path $apiContext 'docs\postman'
 if (-not (Test-Path -LiteralPath $contratos)) { throw "Diretório de contratos não encontrado: $contratos" }
 if (-not (Test-Path -LiteralPath $postmanDocs)) { throw "Documentação Postman não encontrada: $postmanDocs" }
 
-New-Item -ItemType Directory -Force -Path (Join-Path $DiretorioPostman 'contratos\lixo_certo\v1') | Out-Null
-Copy-Item -Path (Join-Path $contratos '*') -Destination (Join-Path $DiretorioPostman 'contratos\lixo_certo\v1') -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $postmanDocs 'Lixo-Certo-API.postman_collection.json') -Destination $DiretorioPostman -Force
-Copy-Item -LiteralPath (Join-Path $postmanDocs 'Lixo-Certo-API.postman_environment.json') -Destination $DiretorioPostman -Force
+$contratosDestino = Join-Path $DiretorioPostman 'contratos\lixo_certo\v1'
+New-Item -ItemType Directory -Force -Path $contratosDestino | Out-Null
+Copy-Item -Path (Join-Path $contratos '*') -Destination $contratosDestino -Recurse -Force
 
-Write-Host 'Contratos e arquivos Postman preparados.' -ForegroundColor Green
+$arquivosPostman = @(
+    'Lixo-Certo-API.postman.proto',
+    'Lixo-Certo-API.grpc.manifest.json',
+    'Lixo-Certo-API.postman_environment.json',
+    'README.md'
+)
+foreach ($arquivo in $arquivosPostman) {
+    $origem = Join-Path $postmanDocs $arquivo
+    if (-not (Test-Path -LiteralPath $origem)) {
+        throw "Artefato Postman não encontrado: $origem"
+    }
+    Copy-Item -LiteralPath $origem -Destination $DiretorioPostman -Force
+}
+
+# Evita que uma execução anterior deixe a coleção HTTP enganosa no diretório de trabalho.
+$colecaoLegada = Join-Path $DiretorioPostman 'Lixo-Certo-API.postman_collection.json'
+if (Test-Path -LiteralPath $colecaoLegada) {
+    Remove-Item -LiteralPath $colecaoLegada -Force
+    Write-Host 'Coleção HTTP legada removida do diretório do Postman.' -ForegroundColor Yellow
+}
+
+Write-Host 'Contratos, definição raiz, catálogo e ambiente Postman preparados.' -ForegroundColor Green
 Write-Host "Diretório de trabalho: $DiretorioPostman"
-Write-Host 'No Postman, use New > gRPC Request e selecione os métodos pela definição compartilhada.'
+Write-Host 'A coleção nativa deve ser criada no cliente: New > gRPC > grpc://{{grpc_host}} > Invoke > Save As.'

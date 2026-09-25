@@ -76,6 +76,8 @@ if ($SmokeTests) {
     }
     pnpm smoke:grpc
     if ($LASTEXITCODE -ne 0) { throw 'Smoke tests gRPC falharam. Consulte reports\grpc-smoke.json.' }
+    pnpm smoke:grpc:reflection
+    if ($LASTEXITCODE -ne 0) { throw 'Server reflection gRPC não respondeu. Verifique HABILITAR_REFLECTION_GRPC e os logs da API.' }
 }
 
 docker compose @compose ps
