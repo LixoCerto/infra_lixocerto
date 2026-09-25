@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('cache', 'api', 'gateway', 'frontend')]
+    [ValidateSet('cache', 'keycloak', 'api', 'gateway', 'frontend')]
     [string]$Servico = 'cache'
 )
 

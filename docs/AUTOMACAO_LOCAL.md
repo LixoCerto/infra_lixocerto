@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-O projeto fornece um fluxo híbrido e reproduzível. O Docker sobe Redis, API, gateway e frontend; um runner gRPC verifica automaticamente os métodos públicos; o script do Postman prepara contratos, definição raiz, ambiente e catálogo para que o cliente Postman crie requisições gRPC nativas.
+O projeto fornece um fluxo híbrido e reproduzível. O Docker sobe Redis, Keycloak, API, gateway e frontend; os runners gRPC verificam métodos públicos e protegidos; o script do Postman prepara contratos, definição raiz, ambiente e catálogo para que o cliente Postman crie requisições gRPC nativas.
 
 A distinção é importante: o Postman não trata um item Collection JSON v2.1 com `method: POST` e URL `grpc://` como uma requisição gRPC nativa. Por isso o fluxo não copia mais a coleção JSON legada e não promete uma importação que o cliente não suporta.
 
@@ -14,7 +14,9 @@ No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-Esse comando cria o `.env` de infraestrutura caso necessário, constrói os quatro serviços Docker, aguarda os estados de saúde, habilita server reflection apenas no ambiente local, prepara os contratos no diretório do Postman e executa cinco smoke tests gRPC. O relatório é gravado em `reports\grpc-smoke.json`.
+Esse comando cria ou completa o `.env` de infraestrutura sem alterar o arquivo privado da API nem o PostgreSQL externo, constrói os cinco serviços Docker, aguarda o realm Keycloak, habilita server reflection apenas no ambiente local, prepara os contratos no diretório do Postman e executa os smoke tests gRPC públicos, reflection e autenticados. O relatório público é gravado em `reports\grpc-smoke.json`.
+
+O realm local possui os clientes `lixo-certo-frontend` e `lixo-certo-postman`, além dos papéis `usuario`, `pesquisador`, `revisor` e `administrador`. Os usuários comuns e administrativos são parametrizados no `.env` e o arquivo do realm não contém senhas reais.
 
 ## Arquivos preparados para o Postman
 
@@ -48,10 +50,24 @@ Para executar apenas os smoke tests:
 .\scripts\testar.ps1
 ```
 
-Os testes cobrem `ServicoSaude/Verificar`, `ServicoMateriais/ListarMateriais`, `ServicoPontosColeta/ListarPontosColeta`, `ServicoQuestionarios/ListarQuestoes` e `ServicoGamificacao/ObterRanking`. Métodos protegidos não são chamados sem um token fornecido explicitamente na sessão.
+Os testes cobrem `ServicoSaude/Verificar`, `ServicoMateriais/ListarMateriais`, `ServicoPontosColeta/ListarPontosColeta`, `ServicoQuestionarios/ListarQuestoes` e `ServicoGamificacao/ObterRanking`. O `smoke:grpc:auth` obtém um token temporário do cliente local `lixo-certo-postman` usando o usuário administrador parametrizado no `.env` e valida `ServicoAutenticacao/ObterIdentidadeAtual` e `ServicoAdministracao/ObterResumoAdministrativo`. O token nunca é impresso.
+
+Para obter um token no ambiente local do Postman, execute:
+
+```powershell
+.\scripts\obter-token-postman.ps1
+```
+
+Para usar o usuário administrador:
+
+```powershell
+.\scripts\obter-token-postman.ps1 -Administrador
+```
+
+O script grava o `access_token` apenas em `%USERPROFILE%\Postman\files\lixo-certo\Lixo-Certo-API.postman_environment.json`. As requisições protegidas devem enviar `authorization: Bearer {{jwt_token}}` na aba **Metadata**.
 
 ## Reflection e segurança
 
 A variável `HABILITAR_REFLECTION_GRPC` é aplicada pelo Compose local e tem valor padrão `true` apenas para desenvolvimento. A API rejeita essa configuração quando `AMBIENTE_EXECUCAO=producao`. Em produção, a variável deve permanecer ausente ou `false`; nesse cenário, o Postman deve usar uma definição Protobuf fornecida de forma controlada.
 
-O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. O runner apenas chama métodos de leitura públicos e não altera a base principal.
+O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. O smoke autenticado executa somente uma consulta de identidade e uma leitura administrativa; a sincronização do usuário pode criar ou atualizar o registro correspondente ao usuário de desenvolvimento no banco LCR, mas não remove tabelas nem executa migrações.

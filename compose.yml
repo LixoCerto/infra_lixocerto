@@ -33,6 +33,36 @@ services:
         max-size: 10m
         max-file: "3"
 
+  keycloak:
+    profiles: ["app"]
+    image: quay.io/keycloak/keycloak:26.3.3
+    container_name: lcr-keycloak
+    command: ["start-dev", "--import-realm", "--hostname=http://localhost:8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?KEYCLOAK_ADMIN_USERNAME deve ser configurado}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD deve ser configurado}
+      KEYCLOAK_DEV_USER_USERNAME: ${KEYCLOAK_DEV_USER_USERNAME:?KEYCLOAK_DEV_USER_USERNAME deve ser configurado}
+      KEYCLOAK_DEV_USER_EMAIL: ${KEYCLOAK_DEV_USER_EMAIL:?KEYCLOAK_DEV_USER_EMAIL deve ser configurado}
+      KEYCLOAK_DEV_USER_PASSWORD: ${KEYCLOAK_DEV_USER_PASSWORD:?KEYCLOAK_DEV_USER_PASSWORD deve ser configurado}
+      KEYCLOAK_DEV_ADMIN_USERNAME: ${KEYCLOAK_DEV_ADMIN_USERNAME:?KEYCLOAK_DEV_ADMIN_USERNAME deve ser configurado}
+      KEYCLOAK_DEV_ADMIN_EMAIL: ${KEYCLOAK_DEV_ADMIN_EMAIL:?KEYCLOAK_DEV_ADMIN_EMAIL deve ser configurado}
+      KEYCLOAK_DEV_ADMIN_PASSWORD: ${KEYCLOAK_DEV_ADMIN_PASSWORD:?KEYCLOAK_DEV_ADMIN_PASSWORD deve ser configurado}
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/lixo-certo-realm.json:/opt/keycloak/data/import/lixo-certo-realm.json:ro
+      - keycloak_data:/opt/keycloak/data
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8081}:8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"
+
   api:
     profiles: ["app"]
     build:
@@ -46,12 +76,17 @@ services:
       AMBIENTE_EXECUCAO: ${AMBIENTE_EXECUCAO:-desenvolvimento}
       PORTA_GRPC: "50051"
       HABILITAR_REFLECTION_GRPC: ${HABILITAR_REFLECTION_GRPC:-true}
+      EMISSOR_OIDC: ${EMISSOR_OIDC:-http://localhost:8081/realms/lixo-certo}
+      AUDIENCIA_OIDC: ${AUDIENCIA_OIDC:-lixo-certo-api}
+      ENDERECO_JWKS: ${ENDERECO_JWKS:-http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs}
       URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
       URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}
     depends_on:
       cache:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     expose:
       - "50051"
     ports:
@@ -131,3 +166,5 @@ services:
 volumes:
   redis_data:
     name: ${REDIS_VOLUME_NAME:-lcr-redis-data}
+  keycloak_data:
+    name: ${KEYCLOAK_VOLUME_NAME:-lcr-keycloak-data}

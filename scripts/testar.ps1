@@ -24,3 +24,8 @@ pnpm smoke:grpc:reflection -- $HostGrpc
 if ($LASTEXITCODE -ne 0) {
     throw 'Server reflection gRPC não respondeu. Verifique HABILITAR_REFLECTION_GRPC e os logs da API.'
 }
+
+pnpm smoke:grpc:auth
+if ($LASTEXITCODE -ne 0) {
+    throw 'Smoke autenticado falhou. Verifique o realm Keycloak, o usuário administrador e as permissões LCR.'
+}

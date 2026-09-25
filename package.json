@@ -7,6 +7,7 @@
     "smoke:grpc": "node tools/grpc-smoke.mjs --report reports/grpc-smoke.json",
     "smoke:grpc:json": "node tools/grpc-smoke.mjs --format json",
     "smoke:grpc:reflection": "node tools/grpc-reflection-smoke.mjs",
+    "smoke:grpc:auth": "node tools/grpc-auth-smoke.mjs",
     "prepare:postman": "powershell -ExecutionPolicy Bypass -File scripts/preparar-postman.ps1",
     "validate:postman-proto": "node tools/validar-postman-proto.mjs"
   },

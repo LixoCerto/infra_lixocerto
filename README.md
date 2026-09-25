@@ -11,6 +11,8 @@ infra_lixocerto/
 │   ├── api.Dockerfile
 │   ├── frontend.Dockerfile
 │   └── envoy.yaml
+├── keycloak/
+│   └── lixo-certo-realm.json
 ├── scripts/
 ├── tools/
 └── docs/
@@ -20,7 +22,7 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 ## Responsabilidades
 
-O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O serviço `api` executa a API NestJS gRPC como usuário não-root e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio.
+O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O serviço `keycloak` fornece o provedor OIDC local, importa o realm de desenvolvimento e emite os access tokens usados pela API. O serviço `api` executa a API NestJS gRPC como usuário não-root e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio.
 
 ## Pré-requisitos
 
@@ -32,7 +34,7 @@ G:\LixoCerto\api_lixocerto
 G:\LixoCerto\frontend_lixocerto
 ```
 
-A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para a senha local do Redis e as variáveis públicas OIDC do bundle frontend.
+A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para a senha local do Redis, as credenciais locais do Keycloak e as variáveis públicas OIDC do bundle frontend. O script de configuração não altera a URL do PostgreSQL.
 
 ## Configuração e execução
 
@@ -40,11 +42,10 @@ No PowerShell:
 
 ```powershell
 cd G:\LixoCerto\infra_lixocerto
-Copy-Item .env.exemplo .env
-notepad .env
+.\scripts\configurar-desenvolvimento.ps1
 ```
 
-Defina `REDIS_PASSWORD`, `VITE_OIDC_ISSUER` e `VITE_OIDC_CLIENT_ID`. Os valores `VITE_*` são públicos no bundle e não podem conter segredos. Para o ambiente local do Postman, mantenha `HABILITAR_REFLECTION_GRPC=true`; essa configuração é bloqueada pela API quando o ambiente é produção.
+Esse script cria ou completa o `.env` local sem modificar o banco externo. Ele gera credenciais aleatórias para o Redis, para o administrador do Keycloak e para os dois usuários de desenvolvimento. Os valores `VITE_*` são públicos no bundle e não podem conter segredos. Para o ambiente local do Postman, mantenha `HABILITAR_REFLECTION_GRPC=true`; essa configuração é bloqueada pela API quando o ambiente é produção.
 
 Para iniciar somente o Redis:
 
@@ -66,9 +67,11 @@ http://localhost:3000
 frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
                                                     ↓
                                           PostgreSQL externo + Redis
+                                                ↑
+                           Keycloak OIDC :8081 → Bearer JWT
 ```
 
-A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente e mantém `URL_BANCO_DADOS` vindo do arquivo privado da API.
+A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente, valida o emissor `http://localhost:8081/realms/lixo-certo` usando o JWKS interno do serviço `keycloak` e mantém `URL_BANCO_DADOS` vindo do arquivo privado da API.
 
 ## Automação local e Postman
 
@@ -80,13 +83,27 @@ Para subir o ambiente, preparar os contratos e o catálogo gRPC, e executar os s
 
 A preparação copia os contratos, a definição raiz `Lixo-Certo-API.postman.proto`, o ambiente e o catálogo de 22 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção JSON HTTP legada. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa `Lixo Certo — API gRPC — Nativa`. Com reflection habilitada, o Postman descobre automaticamente os serviços e métodos; sem reflection, importe a definição raiz.
 
+O endereço do Keycloak local é `http://localhost:8081`. A tela de login do frontend usa o cliente público `lixo-certo-frontend` com Authorization Code + PKCE. Para preencher automaticamente o `jwt_token` do ambiente local do Postman, execute:
+
+```powershell
+.\scripts\obter-token-postman.ps1
+```
+
+O script solicita a senha do usuário comum sem colocá-la na linha de comando. Para testar permissões administrativas, use:
+
+```powershell
+.\scripts\obter-token-postman.ps1 -Administrador
+```
+
+Depois, mantenha em cada requisição protegida o metadado `authorization` com o valor `Bearer {{jwt_token}}`. O token é gravado somente no arquivo de ambiente local do Postman e não deve ser commitado.
+
 O arquivo `Lixo-Certo-API.grpc.manifest.json` não é uma Collection JSON importável. Ele é um catálogo de configuração deliberadamente marcado como não importável, porque o Postman não fornece atualmente um formato público e confiável para serializar requests gRPC nativos em Collection v2.1. A coleção HTTP histórica foi movida para `api_lixocerto/docs/postman/legado/` e não deve ser usada como gRPC.
 
 Consulte [docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md) e [docs/REFERENCIAS_POSTMAN_GRPC.md](docs/REFERENCIAS_POSTMAN_GRPC.md) para o procedimento completo e as fontes oficiais.
 
 ## Segurança
 
-As portas são vinculadas somente a `127.0.0.1`; Redis exige senha; o gateway não publica a administração do Envoy; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado do frontend; e os Dockerfiles copiam somente os diretórios necessários. O server reflection é uma facilidade local e não deve ser habilitado em produção.
+As portas são vinculadas somente a `127.0.0.1`; Redis e Keycloak ficam restritos ao computador local; o gateway não publica a administração do Envoy; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado do frontend; e os Dockerfiles copiam somente os diretórios necessários. O server reflection e o modo `start-dev` do Keycloak são facilidades locais e não devem ser habilitados em produção.
 
 O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes de integração contra a base principal.
 

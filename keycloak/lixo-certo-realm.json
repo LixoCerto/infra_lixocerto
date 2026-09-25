@@ -1,0 +1,161 @@
+{
+  "realm": "lixo-certo",
+  "enabled": true,
+  "displayName": "Lixo Certo — Desenvolvimento",
+  "displayNameHtml": "<strong>Lixo Certo</strong> — Desenvolvimento",
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "usuario",
+        "description": "Usuário da plataforma"
+      },
+      {
+        "name": "pesquisador",
+        "description": "Consulta indicadores agregados"
+      },
+      {
+        "name": "revisor",
+        "description": "Modera conteúdos e pontos de coleta"
+      },
+      {
+        "name": "administrador",
+        "description": "Administra a plataforma"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "lixo-certo-frontend",
+      "name": "Lixo Certo — Frontend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "http://localhost:3000",
+      "redirectUris": [
+        "http://localhost:3000/callback",
+        "http://127.0.0.1:3000/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audiencia-api-lixo-certo",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "lixo-certo-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "lixo-certo-api",
+      "name": "Lixo Certo — API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "lixo-certo-postman",
+      "name": "Lixo Certo — Postman local",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "defaultClientScopes": [
+        "profile",
+        "roles",
+        "email"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audiencia-api-lixo-certo",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "lixo-certo-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "${KEYCLOAK_DEV_USER_USERNAME}",
+      "email": "${KEYCLOAK_DEV_USER_EMAIL}",
+      "firstName": "Usuário",
+      "lastName": "Lixo Certo",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KEYCLOAK_DEV_USER_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "usuario"
+      ]
+    },
+    {
+      "username": "${KEYCLOAK_DEV_ADMIN_USERNAME}",
+      "email": "${KEYCLOAK_DEV_ADMIN_EMAIL}",
+      "firstName": "Administrador",
+      "lastName": "Lixo Certo",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${KEYCLOAK_DEV_ADMIN_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "administrador"
+      ]
+    }
+  ]
+}
