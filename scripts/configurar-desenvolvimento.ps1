@@ -44,6 +44,12 @@ function Ensure-Value([string]$Name, [string]$DefaultValue, [switch]$Secret) {
     }
 }
 
+function Ensure-ExactValue([string]$Name, [string]$ExpectedValue) {
+    if ((Get-EnvValue $Name) -ne $ExpectedValue) {
+        Set-EnvValue $Name $ExpectedValue
+    }
+}
+
 Ensure-Value 'KEYCLOAK_PORT' '8081'
 Ensure-Value 'REDIS_PASSWORD' 'local-redis' -Secret
 Ensure-Value 'KEYCLOAK_ADMIN_USERNAME' 'admin'
@@ -55,15 +61,15 @@ Ensure-Value 'KEYCLOAK_DEV_ADMIN_USERNAME' 'administrador'
 Ensure-Value 'KEYCLOAK_DEV_ADMIN_EMAIL' 'administrador@lixo-certo.local'
 Ensure-Value 'KEYCLOAK_DEV_ADMIN_PASSWORD' 'local-keycloak-administrador' -Secret
 Ensure-Value 'KEYCLOAK_VOLUME_NAME' 'lcr-keycloak-data'
-Ensure-Value 'VITE_OIDC_ISSUER' 'http://localhost:8081/realms/lixo-certo'
-Ensure-Value 'VITE_OIDC_CLIENT_ID' 'lixo-certo-frontend'
-Ensure-Value 'VITE_OIDC_AUDIENCE' 'lixo-certo-api'
-Ensure-Value 'VITE_OIDC_SCOPE' 'openid profile email'
-Ensure-Value 'VITE_OIDC_REDIRECT_URI' 'http://localhost:3000/callback'
-Ensure-Value 'VITE_OIDC_POST_LOGOUT_REDIRECT_URI' 'http://localhost:3000/login'
-Ensure-Value 'EMISSOR_OIDC' 'http://localhost:8081/realms/lixo-certo'
-Ensure-Value 'AUDIENCIA_OIDC' 'lixo-certo-api'
-Ensure-Value 'ENDERECO_JWKS' 'http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs'
+Ensure-ExactValue 'VITE_OIDC_ISSUER' 'http://localhost:8081/realms/lixo-certo'
+Ensure-ExactValue 'VITE_OIDC_CLIENT_ID' 'lixo-certo-frontend'
+Ensure-ExactValue 'VITE_OIDC_AUDIENCE' 'lixo-certo-api'
+Ensure-ExactValue 'VITE_OIDC_SCOPE' 'openid profile email'
+Ensure-ExactValue 'VITE_OIDC_REDIRECT_URI' 'http://localhost:3000/callback'
+Ensure-ExactValue 'VITE_OIDC_POST_LOGOUT_REDIRECT_URI' 'http://localhost:3000/login'
+Ensure-ExactValue 'EMISSOR_OIDC' 'http://localhost:8081/realms/lixo-certo'
+Ensure-ExactValue 'AUDIENCIA_OIDC' 'lixo-certo-api'
+Ensure-ExactValue 'ENDERECO_JWKS' 'http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs'
 
 $utf8SemBOM = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($envPath, ($linhas -join [Environment]::NewLine), $utf8SemBOM)

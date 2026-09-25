@@ -63,6 +63,30 @@ async function obterToken(ambiente) {
   return corpo.access_token;
 }
 
+function diagnosticarToken(token, ambiente) {
+  try {
+    const partes = token.split('.');
+    if (partes.length !== 3) return 'JWT com formato inesperado';
+    const payload = JSON.parse(Buffer.from(partes[1], 'base64url').toString('utf8'));
+    const audiencias = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    const emissorEsperado = ambiente.EMISSOR_OIDC ?? 'http://localhost:8081/realms/lixo-certo';
+    const audienciaEsperada = ambiente.AUDIENCIA_OIDC ?? 'lixo-certo-api';
+    const expiracao = typeof payload.exp === 'number' ? new Date(payload.exp * 1000) : null;
+    const expirado = typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000);
+    return [
+      `iss=${typeof payload.iss === 'string' ? payload.iss : '(ausente)'}`,
+      `aud=${audiencias.filter(Boolean).join(',') || '(ausente)'}`,
+      `azp=${typeof payload.azp === 'string' ? payload.azp : '(ausente)'}`,
+      `exp=${expiracao ? expiracao.toISOString() : '(ausente)'}`,
+      `expirado=${expirado}`,
+      `issuerEsperado=${emissorEsperado}`,
+      `audienciaEsperada=${audienciaEsperada}`,
+    ].join('; ');
+  } catch {
+    return 'não foi possível decodificar os claims do JWT';
+  }
+}
+
 function chamar({ arquivo, servico, metodo, requisicao, token }) {
   return new Promise((resolvePromise, rejectPromise) => {
     const Cliente = carregarServico(arquivo, servico);
@@ -82,9 +106,11 @@ function chamar({ arquivo, servico, metodo, requisicao, token }) {
   });
 }
 
+let ambiente = {};
+let token;
 try {
-  const ambiente = lerAmbiente();
-  const token = await obterToken(ambiente);
+  ambiente = lerAmbiente();
+  token = await obterToken(ambiente);
   const identidade = await chamar({
     arquivo: 'servico_autenticacao.proto',
     servico: 'ServicoAutenticacao',
@@ -106,5 +132,6 @@ try {
   console.log('[OK] ServicoAdministracao/ObterResumoAdministrativo');
 } catch (erro) {
   console.error(`Smoke gRPC autenticado: FALHA — ${erro instanceof Error ? erro.message : String(erro)}`);
+  if (typeof token !== 'undefined') console.error(`Diagnóstico JWT: ${diagnosticarToken(token, ambiente)}`);
   process.exitCode = 1;
 }
