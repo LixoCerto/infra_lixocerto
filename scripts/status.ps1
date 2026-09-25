@@ -16,3 +16,12 @@ $env:REDIS_PASSWORD = $senha
 docker compose @compose exec -T cache redis-cli -a $env:REDIS_PASSWORD ping
 if ($LASTEXITCODE -ne 0) { throw 'Healthcheck Redis falhou.' }
 Remove-Item Env:\REDIS_PASSWORD -ErrorAction SilentlyContinue
+
+$portaKeycloak = (Get-Content -LiteralPath '.env' | Where-Object { $_ -match '^KEYCLOAK_PORT=' } | Select-Object -First 1) -replace '^KEYCLOAK_PORT=', ''
+if ([string]::IsNullOrWhiteSpace($portaKeycloak)) { $portaKeycloak = '8081' }
+try {
+    Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$portaKeycloak/realms/lixo-certo/.well-known/openid-configuration" -TimeoutSec 5 | Out-Null
+    Write-Host 'Keycloak realm lixo-certo: disponível.' -ForegroundColor Green
+} catch {
+    throw 'Keycloak realm lixo-certo não está disponível.'
+}
