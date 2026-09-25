@@ -37,7 +37,7 @@ services:
     profiles: ["app"]
     image: quay.io/keycloak/keycloak:26.3.3
     container_name: lcr-keycloak
-    command: ["start-dev", "--import-realm", "--hostname=http://localhost:8081"]
+    command: ["start-dev", "--import-realm", "--hostname=http://localhost:8081", "--hostname-backchannel-dynamic=true"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?KEYCLOAK_ADMIN_USERNAME deve ser configurado}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD deve ser configurado}

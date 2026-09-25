@@ -6,6 +6,8 @@ O ambiente local usa o container oficial do Keycloak em modo `start-dev` somente
 
 O frontend usa Authorization Code com PKCE. O Postman usa um cliente público separado com Direct Access Grants apenas para obter um token de desenvolvimento sem colocar senha na linha de comando. Em produção, esse cliente e o modo `start-dev` não devem ser usados.
 
+No Compose local, o issuer permanece `http://localhost:8081/realms/lixo-certo` para o navegador e para os tokens. O Keycloak usa backchannel dinâmico para que a API consulte o JWKS por `http://keycloak:8080`, sem trocar o issuer público nem expor a rede interna.
+
 A API valida `iss`, `aud`, assinatura e expiração do access token usando o endpoint JWKS interno do serviço Keycloak. Os papéis realm `usuario`, `pesquisador`, `revisor` e `administrador` são filtrados pela API antes de serem sincronizados nas tabelas LCR.
 
 ## Fontes oficiais
