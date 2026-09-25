@@ -18,6 +18,8 @@ Esse comando cria ou completa o `.env` de infraestrutura sem alterar o arquivo p
 
 O realm local possui os clientes `lixo-certo-frontend` e `lixo-certo-postman`, além dos papéis `usuario`, `pesquisador`, `revisor` e `administrador`. Os usuários comuns e administrativos são parametrizados no `.env` e o arquivo do realm não contém senhas reais.
 
+No desenvolvimento, se o provedor não incluir `email` no access token, a API usa o fallback determinístico `preferred_username@lixo-certo.local` para atender ao campo obrigatório do schema LCR. Esse fallback depende de `AMBIENTE_EXECUCAO=desenvolvimento` e não é permitido em produção.
+
 ## Arquivos preparados para o Postman
 
 O diretório padrão é `%USERPROFILE%\Postman\files\lixo-certo` e contém os contratos em `contratos\lixo_certo\v1\`, a definição raiz `Lixo-Certo-API.postman.proto`, o ambiente `Lixo-Certo-API.postman_environment.json`, o catálogo `Lixo-Certo-API.grpc.manifest.json` e uma cópia deste README. O catálogo possui os 22 serviços/métodos, mensagens e metadados, mas está marcado explicitamente como não importável como Collection JSON.

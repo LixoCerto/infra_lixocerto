@@ -79,6 +79,7 @@ services:
       EMISSOR_OIDC: ${EMISSOR_OIDC:-http://localhost:8081/realms/lixo-certo}
       AUDIENCIA_OIDC: ${AUDIENCIA_OIDC:-lixo-certo-api}
       ENDERECO_JWKS: ${ENDERECO_JWKS:-http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs}
+      DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO: ${DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO:-lixo-certo.local}
       URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
       URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}

@@ -70,6 +70,7 @@ Ensure-ExactValue 'VITE_OIDC_POST_LOGOUT_REDIRECT_URI' 'http://localhost:3000/lo
 Ensure-ExactValue 'EMISSOR_OIDC' 'http://localhost:8081/realms/lixo-certo'
 Ensure-ExactValue 'AUDIENCIA_OIDC' 'lixo-certo-api'
 Ensure-ExactValue 'ENDERECO_JWKS' 'http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs'
+Ensure-ExactValue 'DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO' 'lixo-certo.local'
 
 $utf8SemBOM = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($envPath, ($linhas -join [Environment]::NewLine), $utf8SemBOM)
