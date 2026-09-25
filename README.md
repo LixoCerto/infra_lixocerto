@@ -99,7 +99,7 @@ Depois, mantenha em cada requisição protegida o metadado `authorization` com o
 
 O arquivo `Lixo-Certo-API.grpc.manifest.json` não é uma Collection JSON importável. Ele é um catálogo de configuração deliberadamente marcado como não importável, porque o Postman não fornece atualmente um formato público e confiável para serializar requests gRPC nativos em Collection v2.1. A coleção HTTP histórica foi movida para `api_lixocerto/docs/postman/legado/` e não deve ser usada como gRPC.
 
-Consulte [docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md) e [docs/REFERENCIAS_POSTMAN_GRPC.md](docs/REFERENCIAS_POSTMAN_GRPC.md) para o procedimento completo e as fontes oficiais.
+Consulte [docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md), [docs/REFERENCIAS_POSTMAN_GRPC.md](docs/REFERENCIAS_POSTMAN_GRPC.md) e [docs/REFERENCIAS_KEYCLOAK.md](docs/REFERENCIAS_KEYCLOAK.md) para o procedimento completo e as fontes oficiais.
 
 ## Segurança
 
