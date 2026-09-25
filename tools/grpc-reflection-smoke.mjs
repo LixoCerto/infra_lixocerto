@@ -1,9 +1,10 @@
 import { loadSync } from '@grpc/proto-loader';
 import grpc from '@grpc/grpc-js';
+import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const host = process.argv[2] ?? '127.0.0.1:50051';
-const protoPath = resolve(process.argv[3] ?? '../api-lixo-certo/node_modules/@grpc/reflection/build/proto/grpc/reflection/v1alpha/reflection.proto');
+const protoPath = resolve(process.argv[3] ?? fileURLToPath(new URL('./grpc-reflection.proto', import.meta.url)));
 const definition = loadSync(protoPath, {
   keepCase: true,
   longs: String,
