@@ -12,7 +12,6 @@ if (-not (Test-Path -LiteralPath '.env')) {
 }
 
 & (Join-Path $PSScriptRoot 'configurar-desenvolvimento.ps1')
-if ($LASTEXITCODE -ne 0) { throw 'Falha ao configurar o Keycloak local.' }
 
 $compose = @('--env-file', '.env', '-f', 'compose.yml')
 if ($Aplicacao) {
