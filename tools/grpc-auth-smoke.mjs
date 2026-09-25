@@ -74,6 +74,9 @@ function diagnosticarToken(token, ambiente) {
     const expiracao = typeof payload.exp === 'number' ? new Date(payload.exp * 1000) : null;
     const expirado = typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000);
     return [
+      `sub=${payload.sub ? 'presente' : 'ausente'}`,
+      `email=${payload.email ? 'presente' : 'ausente'}`,
+      `preferred_username=${payload.preferred_username ? 'presente' : 'ausente'}`,
       `iss=${typeof payload.iss === 'string' ? payload.iss : '(ausente)'}`,
       `aud=${audiencias.filter(Boolean).join(',') || '(ausente)'}`,
       `azp=${typeof payload.azp === 'string' ? payload.azp : '(ausente)'}`,

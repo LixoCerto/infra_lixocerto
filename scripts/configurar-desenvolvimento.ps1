@@ -61,6 +61,7 @@ Ensure-Value 'KEYCLOAK_DEV_ADMIN_USERNAME' 'administrador'
 Ensure-Value 'KEYCLOAK_DEV_ADMIN_EMAIL' 'administrador@lixo-certo.local'
 Ensure-Value 'KEYCLOAK_DEV_ADMIN_PASSWORD' 'local-keycloak-administrador' -Secret
 Ensure-Value 'KEYCLOAK_VOLUME_NAME' 'lcr-keycloak-data'
+Ensure-ExactValue 'AMBIENTE_EXECUCAO' 'desenvolvimento'
 Ensure-ExactValue 'VITE_OIDC_ISSUER' 'http://localhost:8081/realms/lixo-certo'
 Ensure-ExactValue 'VITE_OIDC_CLIENT_ID' 'lixo-certo-frontend'
 Ensure-ExactValue 'VITE_OIDC_AUDIENCE' 'lixo-certo-api'
