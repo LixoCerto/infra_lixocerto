@@ -50,6 +50,13 @@ Para executar apenas os smoke tests:
 .\scripts\testar.ps1
 ```
 
+Se o arquivo `keycloak\lixo-certo-realm.json` for alterado, o Keycloak já existente não o reimporta automaticamente. Nesse caso, recrie somente o volume local do Keycloak — nunca o Redis e nunca o PostgreSQL — com confirmação explícita:
+
+```powershell
+.\scripts\resetar-keycloak-local.ps1 -Confirmar
+.\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
+```
+
 Os testes cobrem `ServicoSaude/Verificar`, `ServicoMateriais/ListarMateriais`, `ServicoPontosColeta/ListarPontosColeta`, `ServicoQuestionarios/ListarQuestoes` e `ServicoGamificacao/ObterRanking`. O `smoke:grpc:auth` obtém um token temporário do cliente local `lixo-certo-postman` usando o usuário administrador parametrizado no `.env` e valida `ServicoAutenticacao/ObterIdentidadeAtual` e `ServicoAdministracao/ObterResumoAdministrativo`. O token nunca é impresso.
 
 Para obter um token no ambiente local do Postman, execute:
