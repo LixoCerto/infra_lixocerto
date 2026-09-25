@@ -1,6 +1,6 @@
 param(
     [string]$HostGrpc = '127.0.0.1:50051',
-    [int]$TimeoutMilissegundos = 5000
+    [int]$TimeoutMilissegundos = 15000
 )
 
 $ErrorActionPreference = 'Stop'

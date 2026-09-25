@@ -17,7 +17,7 @@ if (process.argv.includes("--help")) {
 Opções:
   --host HOST:PORT       Endereço gRPC (padrão: 127.0.0.1:50051)
   --proto-dir DIRETÓRIO  Diretório dos contratos .proto
-  --timeout MILIS        Timeout de cada chamada (padrão: 5000)
+  --timeout MILIS        Timeout de cada chamada (padrão: 15000)
   --report ARQUIVO       Salva relatório JSON
   --format json          Imprime somente o relatório JSON
 `);
@@ -25,7 +25,7 @@ Opções:
 }
 
 const host = argument("--host", process.env.GRPC_SMOKE_HOST ?? "127.0.0.1:50051");
-const timeoutMs = Number(argument("--timeout", process.env.GRPC_SMOKE_TIMEOUT ?? "5000"));
+const timeoutMs = Number(argument("--timeout", process.env.GRPC_SMOKE_TIMEOUT ?? "15000"));
 const configuredProtoDir = argument(
   "--proto-dir",
   process.env.GRPC_PROTO_DIR ?? resolve(root, "../api_lixocerto/contratos/lixo_certo/v1"),

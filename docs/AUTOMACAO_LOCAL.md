@@ -14,7 +14,7 @@ No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-Esse comando cria ou completa o `.env` de infraestrutura sem alterar o arquivo privado da API nem o PostgreSQL externo, constrói os cinco serviços Docker, aguarda o realm Keycloak, habilita server reflection apenas no ambiente local, prepara os contratos no diretório do Postman e executa os smoke tests gRPC públicos, reflection e autenticados. O relatório público é gravado em `reports\grpc-smoke.json`.
+Esse comando cria ou completa o `.env` de infraestrutura sem alterar o arquivo privado da API nem o PostgreSQL externo, constrói os cinco serviços Docker, aguarda o realm Keycloak, habilita server reflection apenas no ambiente local, prepara os contratos no diretório do Postman e executa os smoke tests gRPC públicos, reflection e autenticados. O smoke público usa timeout padrão de 15 segundos para acomodar a primeira consulta ao PostgreSQL externo. O relatório público é gravado em `reports\grpc-smoke.json`.
 
 O realm local possui os clientes `lixo-certo-frontend` e `lixo-certo-postman`, além dos papéis `usuario`, `pesquisador`, `revisor` e `administrador`. Os usuários comuns e administrativos são parametrizados no `.env` e o arquivo do realm não contém senhas reais.
 

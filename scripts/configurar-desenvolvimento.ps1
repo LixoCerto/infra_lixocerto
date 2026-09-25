@@ -71,7 +71,5 @@ $utf8SemBOM = New-Object System.Text.UTF8Encoding($false)
 Write-Host 'Ambiente local OIDC configurado para o Keycloak.' -ForegroundColor Green
 Write-Host "Arquivo local: $envPath"
 Write-Host "Usuário comum: $(Get-EnvValue 'KEYCLOAK_DEV_USER_USERNAME')"
-Write-Host "Senha do usuário comum: $(Get-EnvValue 'KEYCLOAK_DEV_USER_PASSWORD')"
 Write-Host "Usuário administrador: $(Get-EnvValue 'KEYCLOAK_DEV_ADMIN_USERNAME')"
-Write-Host "Senha do administrador: $(Get-EnvValue 'KEYCLOAK_DEV_ADMIN_PASSWORD')"
-Write-Host 'As credenciais acima são locais e não devem ser commitadas ou compartilhadas.' -ForegroundColor Yellow
+Write-Host 'As senhas foram mantidas somente no .env local e não serão exibidas.' -ForegroundColor Yellow
