@@ -19,6 +19,24 @@ function Get-EnvValue([string]$Name, [string]$DefaultValue) {
     return ($linha -replace "^$([regex]::Escape($Name))=", '').Trim().Trim('"').Trim("'")
 }
 
+function Set-EnvValue([string]$Name, [string]$Value) {
+    $linhas = @(Get-Content -LiteralPath '.env')
+    $encontrado = $false
+    $novasLinhas = @(
+        $linhas | ForEach-Object {
+            if ($_ -match "^$([regex]::Escape($Name))=") {
+                $encontrado = $true
+                "$Name=$Value"
+            } else {
+                $_
+            }
+        }
+    )
+    if (-not $encontrado) { $novasLinhas += "$Name=$Value" }
+    $utf8SemBom = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText((Resolve-Path '.env'), ($novasLinhas -join [Environment]::NewLine), $utf8SemBom)
+}
+
 $compose = @('--env-file', '.env', '-f', 'compose.yml', '--profile', 'app')
 $volume = Get-EnvValue 'KEYCLOAK_VOLUME_NAME' 'lcr-keycloak-data'
 
@@ -39,4 +57,6 @@ if ($LASTEXITCODE -eq 0 -and $existe) {
 }
 
 Write-Host 'Nenhum volume Redis, container API ou PostgreSQL externo foi alterado.' -ForegroundColor Green
+Set-EnvValue 'VITE_OIDC_GOOGLE_ENABLED' 'false'
+Write-Host 'Login Google foi marcado como desabilitado até que o provedor seja configurado novamente.' -ForegroundColor DarkYellow
 Write-Host 'Agora execute: .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests' -ForegroundColor Cyan

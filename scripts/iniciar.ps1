@@ -73,12 +73,14 @@ function Get-EnvValue([string]$Name, [string]$DefaultValue) {
 
 if ($Aplicacao) {
     Wait-ContainerHealthy 'lcr-cache'
+    Wait-ContainerState 'lcr-mailpit' 'running'
+    Wait-HttpEndpoint "http://127.0.0.1:$(Get-EnvValue 'MAILPIT_WEB_PORT' '8025')/"
     Wait-ContainerState 'lcr-keycloak' 'running'
     Wait-HttpEndpoint "http://127.0.0.1:$(Get-EnvValue 'KEYCLOAK_PORT' '8081')/realms/lixo-certo/.well-known/openid-configuration"
     Wait-ContainerState 'lcr-api' 'running'
     Wait-ContainerState 'lcr-gateway' 'running'
     Wait-ContainerHealthy 'lcr-frontend'
-    Write-Host 'Redis, Keycloak, API, gateway e frontend estão em execução.' -ForegroundColor Green
+    Write-Host 'Redis, Mailpit, Keycloak, API, gateway e frontend estão em execução.' -ForegroundColor Green
 }
 
 if ($PrepararPostman) {

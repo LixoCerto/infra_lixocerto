@@ -3,14 +3,24 @@
   "enabled": true,
   "displayName": "Lixo Certo — Desenvolvimento",
   "displayNameHtml": "<strong>Lixo Certo</strong> — Desenvolvimento",
+  "loginTheme": "lixo-certo",
   "sslRequired": "none",
   "registrationAllowed": true,
   "registrationEmailAsUsername": false,
   "rememberMe": true,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
+  "smtpServer": {
+    "host": "${SMTP_HOST}",
+    "port": "${SMTP_PORT}",
+    "from": "${SMTP_FROM}",
+    "fromDisplayName": "Lixo Certo",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
   "roles": {
     "realm": [
       {

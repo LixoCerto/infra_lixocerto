@@ -22,7 +22,7 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 ## Responsabilidades
 
-O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O serviço `keycloak` fornece o provedor OIDC local, importa o realm de desenvolvimento e emite os access tokens usados pela API. O serviço `api` executa a API NestJS gRPC como usuário não-root e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio.
+O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O `mailpit` captura somente no notebook os e-mails de confirmação e redefinição. O serviço `keycloak` fornece o provedor OIDC local, importa o realm de desenvolvimento e emite os access tokens usados pela API. O serviço `api` executa a API NestJS gRPC como usuário não-root e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio.
 
 ## Pré-requisitos
 
@@ -69,6 +69,8 @@ frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
                                           PostgreSQL externo + Redis
                                                 ↑
                            Keycloak OIDC :8081 → Bearer JWT
+                                                ↑
+                              Mailpit SMTP/UI :1025/:8025
 ```
 
 A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente, valida o emissor `http://localhost:8081/realms/lixo-certo` usando o JWKS interno do serviço `keycloak` e mantém `URL_BANCO_DADOS` vindo do arquivo privado da API.
@@ -98,6 +100,19 @@ O script solicita a senha do usuário comum sem colocá-la na linha de comando. 
 Depois, mantenha em cada requisição protegida o metadado `authorization` com o valor `Bearer {{jwt_token}}`. O token é gravado somente no arquivo de ambiente local do Postman e não deve ser commitado.
 
 O arquivo `Lixo-Certo-API.grpc.manifest.json` não é uma Collection JSON importável. Ele é um catálogo de configuração deliberadamente marcado como não importável, porque o Postman não fornece atualmente um formato público e confiável para serializar requests gRPC nativos em Collection v2.1. A coleção HTTP histórica foi movida para `api_lixocerto/docs/postman/legado/` e não deve ser usada como gRPC.
+
+## Login, cadastro e recuperação de conta
+
+O frontend oferece login, cadastro, confirmação de e-mail, recuperação/alteração de senha e Google opcional sem coletar senhas no React. Todos os fluxos passam pelo Keycloak com Authorization Code + PKCE. Em desenvolvimento, a confirmação e a redefinição aparecem em `http://localhost:8025`, a interface local do Mailpit.
+
+Após mudar o realm, tema, verificação de e-mail ou mappers, aplique a nova configuração removendo **somente** o volume local do Keycloak:
+
+```powershell
+.\scripts\resetar-keycloak-local.ps1 -Confirmar
+.\scripts\iniciar.ps1 -Aplicacao
+```
+
+Para habilitar Google, crie um OAuth Client Web no Google Cloud com o retorno `http://localhost:8081/realms/lixo-certo/broker/google/endpoint` e execute `scripts\configurar-google-keycloak.ps1` usando um `SecureString`. O segredo é enviado ao Keycloak local em memória e nunca é gravado no `.env` nem no frontend. Consulte também [frontend_lixocerto/docs/AUTENTICACAO_OIDC.md](../frontend_lixocerto/docs/AUTENTICACAO_OIDC.md).
 
 Consulte [docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md), [docs/REFERENCIAS_POSTMAN_GRPC.md](docs/REFERENCIAS_POSTMAN_GRPC.md) e [docs/REFERENCIAS_KEYCLOAK.md](docs/REFERENCIAS_KEYCLOAK.md) para o procedimento completo e as fontes oficiais.
 

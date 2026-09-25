@@ -25,3 +25,12 @@ try {
 } catch {
     throw 'Keycloak realm lixo-certo não está disponível.'
 }
+
+$portaMailpit = (Get-Content -LiteralPath '.env' | Where-Object { $_ -match '^MAILPIT_WEB_PORT=' } | Select-Object -First 1) -replace '^MAILPIT_WEB_PORT=', ''
+if ([string]::IsNullOrWhiteSpace($portaMailpit)) { $portaMailpit = '8025' }
+try {
+    Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$portaMailpit/" -TimeoutSec 5 | Out-Null
+    Write-Host 'Mailpit local: disponível.' -ForegroundColor Green
+} catch {
+    throw 'Mailpit local não está disponível.'
+}
