@@ -1,6 +1,7 @@
 param(
-    [ValidateSet('cache', 'mailpit', 'keycloak', 'api', 'gateway', 'frontend')]
-    [string]$Servico = 'cache'
+    [ValidateSet('cache', 'api', 'gateway', 'frontend')]
+    [string]$Servico = 'api',
+    [switch]$Seguir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,4 +11,7 @@ if (-not (Test-Path -LiteralPath '.env')) {
     throw 'Arquivo .env não encontrado. Execute iniciar.ps1 primeiro.'
 }
 
-docker compose --env-file .env -f compose.yml --profile app logs -f --tail=100 $Servico
+$argumentos = @('--env-file', '.env', '-f', 'compose.yml', '--profile', 'app', 'logs', '--tail=100')
+if ($Seguir) { $argumentos += '--follow' }
+$argumentos += $Servico
+docker compose @argumentos

@@ -27,7 +27,7 @@ function Set-EnvValue([string]$Name, [string]$Value) {
         }
     )
     if (-not $encontrado) { $novasLinhas += "$Name=$Value" }
-$script:linhas = $novasLinhas
+    $script:linhas = $novasLinhas
 }
 
 function New-Secret([int]$Bytes = 32) {
@@ -45,46 +45,19 @@ function Ensure-Value([string]$Name, [string]$DefaultValue, [switch]$Secret) {
 }
 
 function Ensure-ExactValue([string]$Name, [string]$ExpectedValue) {
-    if ((Get-EnvValue $Name) -ne $ExpectedValue) {
-        Set-EnvValue $Name $ExpectedValue
-    }
+    if ((Get-EnvValue $Name) -ne $ExpectedValue) { Set-EnvValue $Name $ExpectedValue }
 }
 
-Ensure-Value 'KEYCLOAK_PORT' '8081'
 Ensure-Value 'REDIS_PASSWORD' 'local-redis' -Secret
-Ensure-Value 'KEYCLOAK_ADMIN_USERNAME' 'admin'
-Ensure-Value 'KEYCLOAK_ADMIN_PASSWORD' 'local-keycloak-admin' -Secret
-Ensure-Value 'KEYCLOAK_DEV_USER_USERNAME' 'usuario'
-Ensure-Value 'KEYCLOAK_DEV_USER_EMAIL' 'usuario@lixo-certo.local'
-Ensure-Value 'KEYCLOAK_DEV_USER_PASSWORD' 'local-keycloak-usuario' -Secret
-Ensure-Value 'KEYCLOAK_DEV_ADMIN_USERNAME' 'administrador'
-Ensure-Value 'KEYCLOAK_DEV_ADMIN_EMAIL' 'administrador@lixo-certo.local'
-Ensure-Value 'KEYCLOAK_DEV_ADMIN_PASSWORD' 'local-keycloak-administrador' -Secret
-Ensure-Value 'KEYCLOAK_VOLUME_NAME' 'lcr-keycloak-data'
-Ensure-Value 'MAILPIT_WEB_PORT' '8025'
-Ensure-Value 'SMTP_FROM' 'nao-responda@lixo-certo.local'
 Ensure-Value 'SEGREDO_JWT' 'local-segredo-jwt' -Secret
 Ensure-ExactValue 'EMISSOR_JWT' 'lixo-certo-api'
 Ensure-ExactValue 'AUDIENCIA_JWT' 'lixo-certo-client'
 Ensure-ExactValue 'AMBIENTE_EXECUCAO' 'desenvolvimento'
-Ensure-ExactValue 'VITE_OIDC_ISSUER' 'http://localhost:8081/realms/lixo-certo'
-Ensure-ExactValue 'VITE_OIDC_CLIENT_ID' 'lixo-certo-frontend'
-Ensure-ExactValue 'VITE_OIDC_AUDIENCE' 'lixo-certo-api'
-Ensure-ExactValue 'VITE_OIDC_SCOPE' 'openid profile email'
-Ensure-ExactValue 'VITE_OIDC_REDIRECT_URI' 'http://localhost:3000/callback'
-Ensure-ExactValue 'VITE_OIDC_POST_LOGOUT_REDIRECT_URI' 'http://localhost:3000/login'
-Ensure-Value 'VITE_OIDC_GOOGLE_ENABLED' 'false'
-Ensure-ExactValue 'VITE_MAILPIT_URL' "http://localhost:$(Get-EnvValue 'MAILPIT_WEB_PORT')"
-Ensure-ExactValue 'EMISSOR_OIDC' 'http://localhost:8081/realms/lixo-certo'
-Ensure-ExactValue 'AUDIENCIA_OIDC' 'lixo-certo-api'
-Ensure-ExactValue 'ENDERECO_JWKS' 'http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs'
-Ensure-ExactValue 'DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO' 'lixo-certo.local'
+Ensure-ExactValue 'VITE_API_BASE_URL' '/api/rpc'
 
 $utf8SemBOM = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($envPath, ($linhas -join [Environment]::NewLine), $utf8SemBOM)
 
 Write-Host 'Ambiente local configurado para JWT próprio da API.' -ForegroundColor Green
 Write-Host "Arquivo local: $envPath"
-Write-Host "Usuário comum: $(Get-EnvValue 'KEYCLOAK_DEV_USER_USERNAME')"
-Write-Host "Usuário administrador: $(Get-EnvValue 'KEYCLOAK_DEV_ADMIN_USERNAME')"
-Write-Host 'As senhas foram mantidas somente no .env local e não serão exibidas.' -ForegroundColor Yellow
+Write-Host 'As senhas e o segredo JWT foram mantidos somente no .env local e não serão exibidos.' -ForegroundColor Yellow

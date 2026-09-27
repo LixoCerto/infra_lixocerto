@@ -11,8 +11,6 @@ infra_lixocerto/
 │   ├── api.Dockerfile
 │   ├── frontend.Dockerfile
 │   └── envoy.yaml
-├── keycloak/
-│   └── lixo-certo-realm.json
 ├── scripts/
 ├── tools/
 └── docs/
@@ -22,7 +20,12 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 ## Responsabilidades
 
-O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O serviço `api` executa a API NestJS gRPC como usuário não-root, assina JWTs próprios e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio. Mailpit e Keycloak permanecem no Compose apenas para o frontend legado até sua migração para o login gRPC local.
+- `cache`: Redis local protegido por senha, AOF, volume persistente e healthcheck;
+- `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo;
+- `gateway`: Envoy converte gRPC-Web do navegador para gRPC na API;
+- `frontend`: bundle React/Vite servido pelo Nginx, sem Node em runtime e sem banco próprio.
+
+A autenticação é própria da API. Não há Keycloak, OIDC ou Mailpit no Compose atual.
 
 ## Pré-requisitos
 
@@ -34,7 +37,7 @@ G:\LixoCerto\api_lixocerto
 G:\LixoCerto\frontend_lixocerto
 ```
 
-A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para a senha local do Redis, o `SEGREDO_JWT` da API e as variáveis públicas do bundle frontend. O script de configuração não altera a URL do PostgreSQL.
+A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para Redis, `SEGREDO_JWT` e variáveis públicas do bundle frontend. O script de configuração não altera a URL do PostgreSQL.
 
 ## Configuração e execução
 
@@ -43,19 +46,6 @@ No PowerShell:
 ```powershell
 cd G:\LixoCerto\infra_lixocerto
 .\scripts\configurar-desenvolvimento.ps1
-```
-
-Esse script cria ou completa o `.env` local sem modificar o banco externo. Ele gera credenciais aleatórias para o Redis e o `SEGREDO_JWT`. Os valores `VITE_*` são públicos no bundle e não podem conter segredos. Para o ambiente local do Postman, mantenha `HABILITAR_REFLECTION_GRPC=true`; essa configuração é bloqueada pela API quando o ambiente é produção.
-
-Para iniciar somente o Redis:
-
-```powershell
-docker compose --env-file .env -f compose.yml up -d cache
-```
-
-Para iniciar Redis, API, gateway e frontend:
-
-```powershell
 docker compose --env-file .env -f compose.yml --profile app up -d --build
 ```
 
@@ -75,44 +65,31 @@ A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente, assina e valida
 
 ## Automação local e Postman
 
-Para subir o ambiente, preparar os contratos e o catálogo gRPC, e executar os smoke tests em uma única operação:
+Para subir o ambiente, preparar os contratos, executar smoke tests e mostrar o estado:
 
 ```powershell
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-A preparação copia os contratos, a definição raiz `Lixo-Certo-API.postman.proto`, o ambiente e o catálogo de 26 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção JSON HTTP legada. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa `Lixo Certo — API gRPC — Nativa`. Com reflection habilitada, o Postman descobre automaticamente os serviços e métodos; sem reflection, importe a definição raiz.
+A preparação copia a definição raiz Protobuf, o ambiente e o catálogo de 26 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção HTTP histórica. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa. O manifesto é catálogo, não Collection JSON importável.
 
-Para preencher automaticamente `jwt_token` e `token_atualizacao` do ambiente local do Postman usando a autenticação própria da API, execute:
+Para preencher o ambiente local do Postman usando a autenticação própria:
 
 ```powershell
 .\scripts\obter-token-postman.ps1 -Email 'usuario@exemplo.test'
 ```
 
-O script solicita a senha da conta local sem colocá-la na linha de comando. Depois, mantenha em cada requisição protegida o metadado `authorization` com o valor `Bearer {{jwt_token}}`. Os tokens são gravados somente no arquivo de ambiente local do Postman e não devem ser commitados.
+O script solicita a senha sem colocá-la na linha de comando, chama `Entrar` pelo gRPC e grava os tokens somente no arquivo local do Postman. Em requisições protegidas, mantenha o metadado:
 
-O arquivo `Lixo-Certo-API.grpc.manifest.json` não é uma Collection JSON importável. Ele é um catálogo de configuração deliberadamente marcado como não importável, porque o Postman não fornece atualmente um formato público e confiável para serializar requests gRPC nativos em Collection v2.1. A coleção HTTP histórica foi movida para `api_lixocerto/docs/postman/legado/` e não deve ser usada como gRPC.
-
-## Frontend legado e ciclo de conta
-
-O frontend atual ainda possui o fluxo OIDC/PKCE legado. A API não depende dele: o fluxo oficial da API é `CadastrarUsuario`, `Entrar`, `RenovarToken`, `Sair` e `ObterIdentidadeAtual`. A migração do frontend para esse contrato gRPC deve ser feita em uma etapa própria antes de remover definitivamente Keycloak e Mailpit do Compose.
-
-Após mudar o realm, tema, verificação de e-mail ou mappers, aplique a nova configuração removendo **somente** o volume local do Keycloak:
-
-```powershell
-.\scripts\resetar-keycloak-local.ps1 -Confirmar
-.\scripts\iniciar.ps1 -Aplicacao
+```text
+authorization: Bearer {{jwt_token}}
 ```
-
-Para habilitar Google, crie um OAuth Client Web no Google Cloud com o retorno `http://localhost:8081/realms/lixo-certo/broker/google/endpoint` e execute `scripts\configurar-google-keycloak.ps1` usando um `SecureString`. O segredo é enviado ao Keycloak local em memória e nunca é gravado no `.env` nem no frontend. Consulte também [frontend_lixocerto/docs/AUTENTICACAO_OIDC.md](../frontend_lixocerto/docs/AUTENTICACAO_OIDC.md).
-
-Consulte [docs/AUTOMACAO_LOCAL.md](docs/AUTOMACAO_LOCAL.md), [docs/REFERENCIAS_POSTMAN_GRPC.md](docs/REFERENCIAS_POSTMAN_GRPC.md) e [docs/REFERENCIAS_KEYCLOAK.md](docs/REFERENCIAS_KEYCLOAK.md) para o procedimento completo e as fontes oficiais.
 
 ## Segurança
 
-As portas são vinculadas somente a `127.0.0.1`; Redis e Keycloak ficam restritos ao computador local; o gateway não publica a administração do Envoy; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado do frontend; e os Dockerfiles copiam somente os diretórios necessários. O server reflection e o modo `start-dev` do Keycloak são facilidades locais e não devem ser habilitados em produção.
+As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado do frontend; e os Dockerfiles copiam somente os diretórios necessários. O server reflection é facilidade de desenvolvimento local e deve ficar desabilitado em produção.
 
-O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes de integração contra a base principal.
+O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes destrutivos contra a base principal.
 
 ## Parada e limpeza
 
@@ -120,11 +97,11 @@ O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não ex
 .\scripts\parar.ps1
 ```
 
-Para acompanhar logs:
+Para logs:
 
 ```powershell
 .\scripts\logs.ps1 -Servico api
 .\scripts\logs.ps1 -Servico gateway
 ```
 
-Para remover deliberadamente o volume Redis, use `docker compose --env-file .env -f compose.yml down -v` somente quando essa perda local for desejada.
+Não use `down -v` quando não quiser remover o volume local do Redis.
