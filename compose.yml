@@ -6,14 +6,14 @@ services:
     container_name: lcr-cache
     restart: unless-stopped
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada no arquivo .env}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada em ../api_lixocerto/.env}
     command:
       [
         "redis-server",
         "--appendonly",
         "yes",
         "--requirepass",
-        "${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada no arquivo .env}",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada em ../api_lixocerto/.env}",
       ]
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
@@ -44,17 +44,17 @@ services:
   api:
     profiles: ["app"]
     build:
-      context: ${API_CONTEXT:-../api_lixocerto}
-      dockerfile: ${API_DOCKERFILE:-../infra_lixocerto/docker/api.Dockerfile}
+      context: ../api_lixocerto
+      dockerfile: ../infra_lixocerto/docker/api.Dockerfile
     container_name: lcr-api
     restart: unless-stopped
     env_file:
-      - ${API_ENV_FILE:-../api_lixocerto/.env}
+      - ../api_lixocerto/.env
     environment:
       AMBIENTE_EXECUCAO: ${AMBIENTE_EXECUCAO:-desenvolvimento}
       PORTA_GRPC: "50051"
       HABILITAR_REFLECTION_GRPC: ${HABILITAR_REFLECTION_GRPC:-true}
-      SEGREDO_JWT: ${SEGREDO_JWT:?SEGREDO_JWT deve ser configurado no arquivo .env}
+      SEGREDO_JWT: ${SEGREDO_JWT:?SEGREDO_JWT deve ser configurado em ../api_lixocerto/.env}
       EMISSOR_JWT: ${EMISSOR_JWT:-lixo-certo-api}
       AUDIENCIA_JWT: ${AUDIENCIA_JWT:-lixo-certo-client}
       REDIS_HOST: cache
@@ -66,15 +66,14 @@ services:
       REDIS_TESTE_PASSWORD: ${REDIS_PASSWORD}
       REDIS_TESTE_DB: "15"
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}
-      # E-mail transacional: configurado em api_lixocerto/.env (env_file acima).
-      # Estas variáveis NÃO são redefinidas aqui de propósito.
+      # E-mail transacional e PostgreSQL vêm diretamente de ../api_lixocerto/.env.
     depends_on:
       cache:
         condition: service_healthy
     expose:
       - "50051"
     ports:
-      - "127.0.0.1:${API_PORT:-50051}:50051"
+      - "127.0.0.1:50051:50051"
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -99,7 +98,7 @@ services:
     expose:
       - "8080"
     ports:
-      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+      - "127.0.0.1:8080:8080"
     read_only: true
     tmpfs:
       - /tmp
@@ -120,8 +119,8 @@ services:
   frontend:
     profiles: ["app"]
     build:
-      context: ${FRONTEND_CONTEXT:-../frontend_lixocerto}
-      dockerfile: ${FRONTEND_DOCKERFILE:-../infra_lixocerto/docker/frontend.Dockerfile}
+      context: ../frontend_lixocerto
+      dockerfile: ../infra_lixocerto/docker/frontend.Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/rpc}
     container_name: lcr-frontend
@@ -130,7 +129,7 @@ services:
       gateway:
         condition: service_started
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:-3000}:8080"
+      - "127.0.0.1:3000:8080"
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -143,4 +142,4 @@ services:
 
 volumes:
   redis_data:
-    name: ${REDIS_VOLUME_NAME:-lcr-redis-data}
+    name: lcr-redis-data

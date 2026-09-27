@@ -9,10 +9,13 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
-if (-not (Test-Path -LiteralPath '.env')) { Copy-Item -LiteralPath '.env.exemplo' -Destination '.env' }
 & (Join-Path $PSScriptRoot 'configurar-desenvolvimento.ps1')
 
-$compose = @('--env-file', '.env', '-f', 'compose.yml')
+$compose = @(
+    '--env-file', '..\api_lixocerto\.env',
+    '--env-file', '..\frontend_lixocerto\.env',
+    '-f', 'compose.yml'
+)
 if ($Aplicacao) {
     $compose += @('--profile', 'app')
     docker compose @compose up -d --build
@@ -56,18 +59,22 @@ if ($PrepararPostman) {
 if ($SmokeTests) {
     if (-not $Aplicacao) { throw 'Use -Aplicacao junto com -SmokeTests para garantir que a API esteja em execução.' }
     if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) { throw 'pnpm não encontrado. Instale Node.js com Corepack habilitado.' }
-    if (-not (Test-Path -LiteralPath 'node_modules')) {
+    if (-not (Test-Path -LiteralPath '..\api_lixocerto\node_modules')) {
+        Push-Location '..\api_lixocerto'
         pnpm install --frozen-lockfile
-        if ($LASTEXITCODE -ne 0) { throw 'Falha ao instalar as dependências do runner gRPC.' }
+        if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Falha ao instalar as dependências do runner gRPC.' }
+        Pop-Location
     }
+    Push-Location '..\api_lixocerto'
     pnpm smoke:grpc -- --timeout $TimeoutSmokeMilissegundos
-    if ($LASTEXITCODE -ne 0) { throw 'Smoke tests gRPC falharam. Consulte reports\grpc-smoke.json.' }
+    if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Smoke tests gRPC falharam. Consulte reports\grpc-smoke.json.' }
     pnpm smoke:grpc:reflection
-    if ($LASTEXITCODE -ne 0) { throw 'Server reflection gRPC não respondeu. Verifique HABILITAR_REFLECTION_GRPC e os logs da API.' }
+    if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Server reflection gRPC não respondeu. Verifique HABILITAR_REFLECTION_GRPC e os logs da API.' }
     if ($SmokeAutenticado) {
         pnpm smoke:grpc:auth
-        if ($LASTEXITCODE -ne 0) { throw 'Smoke autenticado falhou. Defina GRPC_SMOKE_EMAIL e GRPC_SMOKE_PASSWORD e confirme que a conta existe.' }
+        if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Smoke autenticado falhou. Defina GRPC_SMOKE_EMAIL e GRPC_SMOKE_PASSWORD e confirme que a conta existe.' }
     }
+    Pop-Location
 }
 
 docker compose @compose ps

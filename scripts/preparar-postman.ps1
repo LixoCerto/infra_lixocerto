@@ -4,20 +4,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $infraRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$envPath = Join-Path $infraRoot '.env'
-
-function Get-DotEnvValue([string]$Name, [string]$DefaultValue) {
-    if (-not (Test-Path -LiteralPath $envPath)) { return $DefaultValue }
-    $line = Get-Content -LiteralPath $envPath | Where-Object { $_ -match "^$Name=" } | Select-Object -First 1
-    if (-not $line) { return $DefaultValue }
-    return ($line -replace "^$Name=", '').Trim().Trim('"').Trim("'")
-}
-
-$apiContext = Get-DotEnvValue 'API_CONTEXT' (Join-Path $infraRoot '..\api_lixocerto')
-if (-not [IO.Path]::IsPathRooted($apiContext)) {
-    $apiContext = Join-Path $infraRoot $apiContext
-}
-$apiContext = (Resolve-Path -LiteralPath $apiContext).Path
+$apiContext = (Resolve-Path (Join-Path $infraRoot '..\api_lixocerto')).Path
 $contratos = Join-Path $apiContext 'contratos\lixo_certo\v1'
 $postmanDocs = Join-Path $apiContext 'docs\postman'
 
@@ -71,7 +58,6 @@ if ($tokensPostmanExistentes.Count -gt 0) {
     $ambienteNovo | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $destinoAmbiente -Encoding utf8
 }
 
-# Evita que uma execução anterior deixe a coleção HTTP enganosa no diretório de trabalho.
 $colecaoLegada = Join-Path $DiretorioPostman 'Lixo-Certo-API.postman_collection.json'
 if (Test-Path -LiteralPath $colecaoLegada) {
     Remove-Item -LiteralPath $colecaoLegada -Force

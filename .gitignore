@@ -1,7 +1,6 @@
 # Segredos locais
 .env
 .env.*
-!.env.exemplo
 
 # Dependências e artefatos Node
 node_modules/

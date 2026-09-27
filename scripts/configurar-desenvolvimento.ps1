@@ -1,63 +1,38 @@
 $ErrorActionPreference = 'Stop'
 $infraRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$envPath = Join-Path $infraRoot '.env'
+$apiRoot = (Resolve-Path (Join-Path $infraRoot '..\api_lixocerto')).Path
+$frontendRoot = (Resolve-Path (Join-Path $infraRoot '..\frontend_lixocerto')).Path
+$apiEnvPath = Join-Path $apiRoot '.env'
+$frontendEnvPath = Join-Path $frontendRoot '.env'
 
-if (-not (Test-Path -LiteralPath $envPath)) {
-    Copy-Item -LiteralPath (Join-Path $infraRoot '.env.exemplo') -Destination $envPath
+if (-not (Test-Path -LiteralPath $apiEnvPath)) {
+    throw "Arquivo da API não encontrado: $apiEnvPath. Crie-o a partir de .env.exemplo."
+}
+if (-not (Test-Path -LiteralPath $frontendEnvPath)) {
+    throw "Arquivo do frontend não encontrado: $frontendEnvPath. Crie-o a partir de .env.exemplo."
 }
 
-$linhas = @(Get-Content -LiteralPath $envPath)
-
-function Get-EnvValue([string]$Name) {
-    $linha = $linhas | Where-Object { $_ -match "^$([regex]::Escape($Name))=" } | Select-Object -First 1
+function Get-EnvValue([string]$Path, [string]$Name) {
+    $linha = Get-Content -LiteralPath $Path | Where-Object { $_ -match "^$([regex]::Escape($Name))=" } | Select-Object -First 1
     if (-not $linha) { return $null }
     return ($linha -replace "^$([regex]::Escape($Name))=", '').Trim().Trim('"').Trim("'")
 }
 
-function Set-EnvValue([string]$Name, [string]$Value) {
-    $encontrado = $false
-    $novasLinhas = @(
-        $linhas | ForEach-Object {
-            if ($_ -match "^$([regex]::Escape($Name))=") {
-                $encontrado = $true
-                "$Name=$Value"
-            } else {
-                $_
-            }
-        }
-    )
-    if (-not $encontrado) { $novasLinhas += "$Name=$Value" }
-    $script:linhas = $novasLinhas
-}
-
-function New-Secret([int]$Bytes = 32) {
-    $buffer = New-Object byte[] $Bytes
-    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($buffer)
-    return ([Convert]::ToBase64String($buffer) -replace '[^A-Za-z0-9]', '').Substring(0, 32)
-}
-
-function Ensure-Value([string]$Name, [string]$DefaultValue, [switch]$Secret) {
-    $atual = Get-EnvValue $Name
-    $deveGerar = [string]::IsNullOrWhiteSpace($atual) -or $atual -match '^(alterar_|gerar-com|seu-provedor|https://.*example)'
-    if ($deveGerar) {
-        Set-EnvValue $Name ($(if ($Secret) { New-Secret } else { $DefaultValue }))
+$obrigatoriasApi = @(
+    'BANCO_DADOS_HOST', 'BANCO_DADOS_PORTA', 'BANCO_DADOS_USUARIO',
+    'BANCO_DADOS_SENHA', 'BANCO_DADOS_NOME', 'REDIS_PASSWORD',
+    'SEGREDO_JWT', 'SEGREDO_HASH_PARTICIPANTE', 'SEGREDO_CODIGO_EMAIL'
+)
+foreach ($nome in $obrigatoriasApi) {
+    if ([string]::IsNullOrWhiteSpace((Get-EnvValue $apiEnvPath $nome))) {
+        throw "$nome não está configurada em $apiEnvPath."
     }
 }
-
-function Ensure-ExactValue([string]$Name, [string]$ExpectedValue) {
-    if ((Get-EnvValue $Name) -ne $ExpectedValue) { Set-EnvValue $Name $ExpectedValue }
+if ([string]::IsNullOrWhiteSpace((Get-EnvValue $frontendEnvPath 'VITE_API_BASE_URL'))) {
+    throw 'VITE_API_BASE_URL não está configurada no .env do frontend.'
 }
 
-Ensure-Value 'REDIS_PASSWORD' 'local-redis' -Secret
-Ensure-Value 'SEGREDO_JWT' 'local-segredo-jwt' -Secret
-Ensure-ExactValue 'EMISSOR_JWT' 'lixo-certo-api'
-Ensure-ExactValue 'AUDIENCIA_JWT' 'lixo-certo-client'
-Ensure-ExactValue 'AMBIENTE_EXECUCAO' 'desenvolvimento'
-Ensure-ExactValue 'VITE_API_BASE_URL' '/api/rpc'
-
-$utf8SemBOM = New-Object System.Text.UTF8Encoding($false)
-[IO.File]::WriteAllText($envPath, ($linhas -join [Environment]::NewLine), $utf8SemBOM)
-
-Write-Host 'Ambiente local configurado para JWT próprio da API.' -ForegroundColor Green
-Write-Host "Arquivo local: $envPath"
-Write-Host 'As senhas e o segredo JWT foram mantidos somente no .env local e não serão exibidos.' -ForegroundColor Yellow
+Write-Host 'Ambientes da API e do frontend encontrados e validados.' -ForegroundColor Green
+Write-Host "API: $apiEnvPath"
+Write-Host "Frontend: $frontendEnvPath"
+Write-Host 'A infraestrutura não possui nem cria um .env próprio.' -ForegroundColor Yellow

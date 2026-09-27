@@ -14,9 +14,9 @@ No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-Esse comando cria ou completa o `.env` da infraestrutura sem alterar o `.env` privado da API nem o PostgreSQL externo, constrói os quatro serviços Docker, aguarda healthchecks, prepara os contratos no diretório do Postman e executa smoke público e reflection.
+Esse comando valida os `.env` da API e do frontend, constrói os quatro serviços Docker, aguarda healthchecks, prepara os contratos no diretório do Postman e executa smoke público e reflection. A infraestrutura não cria nem mantém um `.env` próprio.
 
-O configurador gera `SEGREDO_JWT` e `REDIS_PASSWORD` localmente quando ainda são placeholders. Os valores não são impressos.
+O configurador apenas valida se os valores obrigatórios já existem nos `.env` da API e do frontend. Os valores não são impressos.
 
 ## Banco externo
 

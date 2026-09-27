@@ -7,11 +7,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
-if (-not (Test-Path -LiteralPath '.env')) {
-    throw 'Arquivo .env não encontrado. Execute iniciar.ps1 primeiro.'
-}
-
-$argumentos = @('--env-file', '.env', '-f', 'compose.yml', '--profile', 'app', 'logs', '--tail=100')
+& (Join-Path $PSScriptRoot 'configurar-desenvolvimento.ps1')
+$argumentos = @('--env-file', '..\api_lixocerto\.env', '--env-file', '..\frontend_lixocerto\.env', '-f', 'compose.yml', '--profile', 'app', 'logs', '--tail=100')
 if ($Seguir) { $argumentos += '--follow' }
 $argumentos += $Servico
 docker compose @argumentos

@@ -37,7 +37,7 @@ G:\LixoCerto\api_lixocerto
 G:\LixoCerto\frontend_lixocerto
 ```
 
-A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para Redis, `SEGREDO_JWT` e variáveis públicas do bundle frontend. O script de configuração não altera a URL do PostgreSQL.
+A API deve possuir `.env` privado com PostgreSQL, Redis, JWT e e-mail. O frontend deve possuir seu próprio `.env` com `VITE_API_BASE_URL`. A infraestrutura não possui `.env` próprio: o Compose carrega diretamente os dois arquivos dos projetos irmãos.
 
 ## Configuração e execução
 
@@ -46,7 +46,7 @@ No PowerShell:
 ```powershell
 cd G:\LixoCerto\infra_lixocerto
 .\scripts\configurar-desenvolvimento.ps1
-docker compose --env-file .env -f compose.yml --profile app up -d --build
+docker compose --env-file ..\api_lixocerto\.env --env-file ..\frontend_lixocerto\.env -f compose.yml --profile app up -d --build
 ```
 
 O fluxo integrado é:
@@ -61,7 +61,7 @@ frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
                               JWT próprio / papéis / permissões
 ```
 
-A API recebe `REDIS_HOST=cache, REDIS_PORT=6379, REDIS_PASSWORD=senha, REDIS_DB=0` internamente, assina e valida JWT com `SEGREDO_JWT` e mantém `BANCO_DADOS_HOST/PORTA/USUARIO/SENHA/NOME` vindo do arquivo privado da API.
+A API recebe `REDIS_HOST=cache`, `REDIS_PORT=6379` e os segredos vindos de `../api_lixocerto/.env`. O bundle do frontend recebe `VITE_API_BASE_URL` de `../frontend_lixocerto/.env`.
 
 ## Automação local e Postman
 
@@ -87,7 +87,7 @@ authorization: Bearer {{jwt_token}}
 
 ## Segurança
 
-As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado do frontend; e os Dockerfiles copiam somente os diretórios necessários. O server reflection é facilidade de desenvolvimento local e deve ficar desabilitado em produção.
+As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado da API; o frontend usa apenas `VITE_API_BASE_URL` durante o build; e os Dockerfiles copiam somente os diretórios necessários. O server reflection é facilidade de desenvolvimento local e deve ficar desabilitado em produção.
 
 O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes destrutivos contra a base principal.
 
