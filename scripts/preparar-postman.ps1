@@ -34,14 +34,19 @@ $arquivosPostman = @(
     'Lixo-Certo-API.postman_environment.json',
     'README.md'
 )
-$tokenPostmanExistente = $null
+$tokensPostmanExistentes = @{}
 $destinoAmbiente = Join-Path $DiretorioPostman 'Lixo-Certo-API.postman_environment.json'
 if (Test-Path -LiteralPath $destinoAmbiente) {
     try {
         $ambienteExistente = Get-Content -LiteralPath $destinoAmbiente -Raw | ConvertFrom-Json
-        $tokenPostmanExistente = @($ambienteExistente.values) |
-            Where-Object { $_.key -eq 'jwt_token' -and -not [string]::IsNullOrWhiteSpace($_.value) } |
-            Select-Object -ExpandProperty value -First 1
+        foreach ($nomeToken in @('jwt_token', 'token_atualizacao')) {
+            $valorToken = @($ambienteExistente.values) |
+                Where-Object { $_.key -eq $nomeToken -and -not [string]::IsNullOrWhiteSpace($_.value) } |
+                Select-Object -ExpandProperty value -First 1
+            if (-not [string]::IsNullOrWhiteSpace($valorToken)) {
+                $tokensPostmanExistentes[$nomeToken] = $valorToken
+            }
+        }
     } catch {
         Write-Host 'O ambiente Postman existente não pôde ser lido; será substituído pelo modelo.' -ForegroundColor Yellow
     }
@@ -54,14 +59,16 @@ foreach ($arquivo in $arquivosPostman) {
     Copy-Item -LiteralPath $origem -Destination $DiretorioPostman -Force
 }
 
-if (-not [string]::IsNullOrWhiteSpace($tokenPostmanExistente)) {
+if ($tokensPostmanExistentes.Count -gt 0) {
     $ambienteNovo = Get-Content -LiteralPath $destinoAmbiente -Raw | ConvertFrom-Json
-    $variavelJwt = @($ambienteNovo.values) | Where-Object { $_.key -eq 'jwt_token' } | Select-Object -First 1
-    if ($variavelJwt) {
-        $variavelJwt.value = $tokenPostmanExistente
-        $variavelJwt.type = 'secret'
-        $ambienteNovo | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $destinoAmbiente -Encoding utf8
+    foreach ($itemToken in $tokensPostmanExistentes.GetEnumerator()) {
+        $variavelToken = @($ambienteNovo.values) | Where-Object { $_.key -eq $itemToken.Key } | Select-Object -First 1
+        if ($variavelToken) {
+            $variavelToken.value = $itemToken.Value
+            $variavelToken.type = 'secret'
+        }
     }
+    $ambienteNovo | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $destinoAmbiente -Encoding utf8
 }
 
 # Evita que uma execução anterior deixe a coleção HTTP enganosa no diretório de trabalho.
