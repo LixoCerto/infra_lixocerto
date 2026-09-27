@@ -40,10 +40,10 @@ function Wait-ContainerHealthy([string]$Container, [int]$TimeoutSeconds = 120) {
 
 if ($Aplicacao) {
     Wait-ContainerHealthy 'lcr-cache'
-    Wait-ContainerState 'lcr-api' 'running'
+    Wait-ContainerHealthy 'lcr-api' 240
     Wait-ContainerState 'lcr-gateway' 'running'
     Wait-ContainerHealthy 'lcr-frontend'
-    Write-Host 'Redis, API, gateway e frontend estão em execução.' -ForegroundColor Green
+    Write-Host 'Redis e API gRPC estão saudáveis; gateway e frontend estão em execução.' -ForegroundColor Green
 }
 
 if ($PrepararPostman) {

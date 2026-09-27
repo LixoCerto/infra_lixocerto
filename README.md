@@ -22,7 +22,7 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 - `cache-init`: inicializa e corrige a propriedade do volume Redis antes do processo não-root;
 - `cache`: Redis local protegido por senha, AOF, volume persistente e healthcheck;
-- `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo;
+- `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo; o healthcheck confirma que a porta gRPC está aceitando conexões;
 - `gateway`: Envoy converte gRPC-Web do navegador para gRPC na API;
 - `frontend`: bundle React/Vite servido pelo Nginx, sem Node em runtime e sem banco próprio.
 
@@ -56,6 +56,8 @@ docker compose -f compose.yml --profile app up -d --build
 ```
 
 O `compose.yml` carrega automaticamente `..\api_lixocerto\.env` para a API e o Redis, e o Dockerfile do frontend carrega `..\frontend_lixocerto\.env` durante o build do Vite.
+
+O gateway só inicia depois que a API passa no healthcheck gRPC. Durante uma inicialização fria, consulte `docker compose -f compose.yml ps` e aguarde `healthy` para a API antes de investigar falhas de conexão; o healthcheck permite até três minutos para a primeira inicialização e não reinicia nem encerra a API.
 
 ## Fluxo integrado
 
