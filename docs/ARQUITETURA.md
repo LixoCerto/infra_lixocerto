@@ -5,7 +5,7 @@
 | Projeto | Responsabilidade | Docker próprio |
 |---|---|---:|
 | `api_lixocerto` | API gRPC, migrations, regras de negócio, PostgreSQL e Redis | Não |
-| `frontend_lixocerto` | Interface React/Vite estática, OIDC/PKCE e cliente gRPC-Web | Não |
+| `frontend_lixocerto` | Interface React/Vite estática, cliente gRPC-Web e layout adaptativo | Não |
 | `infra_lixocerto` | Dockerfiles, Compose, Envoy, Redis local e operação | Sim |
 
 ## Imagens
@@ -40,4 +40,4 @@ O Redis exige senha, habilita AOF, mantém volume nomeado, usa healthcheck, rein
 
 ## Limites
 
-O projeto não executa migrations automaticamente, não publica portas públicas e não armazena segredos. A preparação do banco remoto e o cadastro das URLs OIDC devem ser feitos pelo administrador responsável.
+O projeto não executa migrations automaticamente, não publica portas públicas e não armazena segredos. A preparação do banco remoto e a configuração do `SEGREDO_JWT` devem ser feitas pelo administrador responsável.

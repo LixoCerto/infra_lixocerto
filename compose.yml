@@ -102,18 +102,15 @@ services:
       AMBIENTE_EXECUCAO: ${AMBIENTE_EXECUCAO:-desenvolvimento}
       PORTA_GRPC: "50051"
       HABILITAR_REFLECTION_GRPC: ${HABILITAR_REFLECTION_GRPC:-true}
-      EMISSOR_OIDC: ${EMISSOR_OIDC:-http://localhost:8081/realms/lixo-certo}
-      AUDIENCIA_OIDC: ${AUDIENCIA_OIDC:-lixo-certo-api}
-      ENDERECO_JWKS: ${ENDERECO_JWKS:-http://keycloak:8080/realms/lixo-certo/protocol/openid-connect/certs}
-      DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO: ${DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO:-lixo-certo.local}
+      SEGREDO_JWT: ${SEGREDO_JWT:?SEGREDO_JWT deve ser configurado no arquivo .env}
+      EMISSOR_JWT: ${EMISSOR_JWT:-lixo-certo-api}
+      AUDIENCIA_JWT: ${AUDIENCIA_JWT:-lixo-certo-client}
       URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
       URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}
     depends_on:
       cache:
         condition: service_healthy
-      keycloak:
-        condition: service_started
     expose:
       - "50051"
     ports:

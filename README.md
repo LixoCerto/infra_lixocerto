@@ -22,7 +22,7 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 ## Responsabilidades
 
-O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O `mailpit` captura somente no notebook os e-mails de confirmação e redefinição. O serviço `keycloak` fornece o provedor OIDC local, importa o realm de desenvolvimento e emite os access tokens usados pela API. O serviço `api` executa a API NestJS gRPC como usuário não-root e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio.
+O serviço `cache` executa Redis local protegido por senha, AOF, volume persistente e healthcheck. O serviço `api` executa a API NestJS gRPC como usuário não-root, assina JWTs próprios e conecta-se ao PostgreSQL externo. O `gateway` converte gRPC-Web do navegador para gRPC na API. O `frontend` entrega o bundle React/Vite pelo Nginx, sem Node em runtime e sem banco próprio. Mailpit e Keycloak permanecem no Compose apenas para o frontend legado até sua migração para o login gRPC local.
 
 ## Pré-requisitos
 
@@ -34,7 +34,7 @@ G:\LixoCerto\api_lixocerto
 G:\LixoCerto\frontend_lixocerto
 ```
 
-A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para a senha local do Redis, as credenciais locais do Keycloak e as variáveis públicas OIDC do bundle frontend. O script de configuração não altera a URL do PostgreSQL.
+A API deve possuir `.env` privado com o PostgreSQL externo. A infraestrutura usa `.env` próprio para a senha local do Redis, o `SEGREDO_JWT` da API e as variáveis públicas do bundle frontend. O script de configuração não altera a URL do PostgreSQL.
 
 ## Configuração e execução
 
@@ -45,7 +45,7 @@ cd G:\LixoCerto\infra_lixocerto
 .\scripts\configurar-desenvolvimento.ps1
 ```
 
-Esse script cria ou completa o `.env` local sem modificar o banco externo. Ele gera credenciais aleatórias para o Redis, para o administrador do Keycloak e para os dois usuários de desenvolvimento. Os valores `VITE_*` são públicos no bundle e não podem conter segredos. Para o ambiente local do Postman, mantenha `HABILITAR_REFLECTION_GRPC=true`; essa configuração é bloqueada pela API quando o ambiente é produção.
+Esse script cria ou completa o `.env` local sem modificar o banco externo. Ele gera credenciais aleatórias para o Redis e o `SEGREDO_JWT`. Os valores `VITE_*` são públicos no bundle e não podem conter segredos. Para o ambiente local do Postman, mantenha `HABILITAR_REFLECTION_GRPC=true`; essa configuração é bloqueada pela API quando o ambiente é produção.
 
 Para iniciar somente o Redis:
 
@@ -67,13 +67,11 @@ http://localhost:3000
 frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
                                                     ↓
                                           PostgreSQL externo + Redis
-                                                ↑
-                           Keycloak OIDC :8081 → Bearer JWT
-                                                ↑
-                              Mailpit SMTP/UI :1025/:8025
+                                                    ↑
+                              JWT próprio / papéis / permissões
 ```
 
-A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente, valida o emissor `http://localhost:8081/realms/lixo-certo` usando o JWKS interno do serviço `keycloak` e mantém `URL_BANCO_DADOS` vindo do arquivo privado da API.
+A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente, assina e valida JWT com `SEGREDO_JWT` e mantém `URL_BANCO_DADOS` vindo do arquivo privado da API.
 
 ## Automação local e Postman
 
@@ -83,27 +81,21 @@ Para subir o ambiente, preparar os contratos e o catálogo gRPC, e executar os s
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-A preparação copia os contratos, a definição raiz `Lixo-Certo-API.postman.proto`, o ambiente e o catálogo de 22 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção JSON HTTP legada. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa `Lixo Certo — API gRPC — Nativa`. Com reflection habilitada, o Postman descobre automaticamente os serviços e métodos; sem reflection, importe a definição raiz.
+A preparação copia os contratos, a definição raiz `Lixo-Certo-API.postman.proto`, o ambiente e o catálogo de 26 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção JSON HTTP legada. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa `Lixo Certo — API gRPC — Nativa`. Com reflection habilitada, o Postman descobre automaticamente os serviços e métodos; sem reflection, importe a definição raiz.
 
-O endereço do Keycloak local é `http://localhost:8081`. A tela de login do frontend usa o cliente público `lixo-certo-frontend` com Authorization Code + PKCE. Para preencher automaticamente o `jwt_token` do ambiente local do Postman, execute:
-
-```powershell
-.\scripts\obter-token-postman.ps1
-```
-
-O script solicita a senha do usuário comum sem colocá-la na linha de comando. Para testar permissões administrativas, use:
+Para preencher automaticamente `jwt_token` e `token_atualizacao` do ambiente local do Postman usando a autenticação própria da API, execute:
 
 ```powershell
-.\scripts\obter-token-postman.ps1 -Administrador
+.\scripts\obter-token-postman.ps1 -Email 'usuario@exemplo.test'
 ```
 
-Depois, mantenha em cada requisição protegida o metadado `authorization` com o valor `Bearer {{jwt_token}}`. O token é gravado somente no arquivo de ambiente local do Postman e não deve ser commitado.
+O script solicita a senha da conta local sem colocá-la na linha de comando. Depois, mantenha em cada requisição protegida o metadado `authorization` com o valor `Bearer {{jwt_token}}`. Os tokens são gravados somente no arquivo de ambiente local do Postman e não devem ser commitados.
 
 O arquivo `Lixo-Certo-API.grpc.manifest.json` não é uma Collection JSON importável. Ele é um catálogo de configuração deliberadamente marcado como não importável, porque o Postman não fornece atualmente um formato público e confiável para serializar requests gRPC nativos em Collection v2.1. A coleção HTTP histórica foi movida para `api_lixocerto/docs/postman/legado/` e não deve ser usada como gRPC.
 
-## Login, cadastro e recuperação de conta
+## Frontend legado e ciclo de conta
 
-O frontend oferece login, cadastro, confirmação de e-mail, recuperação/alteração de senha e Google opcional sem coletar senhas no React. Todos os fluxos passam pelo Keycloak com Authorization Code + PKCE. Em desenvolvimento, a confirmação e a redefinição aparecem em `http://localhost:8025`, a interface local do Mailpit.
+O frontend atual ainda possui o fluxo OIDC/PKCE legado. A API não depende dele: o fluxo oficial da API é `CadastrarUsuario`, `Entrar`, `RenovarToken`, `Sair` e `ObterIdentidadeAtual`. A migração do frontend para esse contrato gRPC deve ser feita em uma etapa própria antes de remover definitivamente Keycloak e Mailpit do Compose.
 
 Após mudar o realm, tema, verificação de e-mail ou mappers, aplique a nova configuração removendo **somente** o volume local do Keycloak:
 

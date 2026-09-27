@@ -10,7 +10,8 @@
     "smoke:grpc:auth": "node tools/grpc-auth-smoke.mjs",
     "prepare:postman": "powershell -ExecutionPolicy Bypass -File scripts/preparar-postman.ps1",
     "validate:postman-proto": "node tools/validar-postman-proto.mjs",
-    "validate:identity": "node tools/validar-identidade-local.mjs"
+    "validate:identity": "node tools/validar-identidade-local.mjs",
+    "validate:auth-local": "node tools/validar-auth-local.mjs"
   },
   "engines": {
     "node": ">=20"

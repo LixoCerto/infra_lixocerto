@@ -2,6 +2,7 @@ param(
     [switch]$Aplicacao,
     [switch]$PrepararPostman,
     [switch]$SmokeTests,
+    [switch]$SmokeAutenticado,
     [int]$TimeoutSmokeMilissegundos = 15000
 )
 
@@ -103,11 +104,9 @@ if ($SmokeTests) {
     if ($LASTEXITCODE -ne 0) { throw 'Smoke tests gRPC falharam. Consulte reports\grpc-smoke.json.' }
     pnpm smoke:grpc:reflection
     if ($LASTEXITCODE -ne 0) { throw 'Server reflection gRPC não respondeu. Verifique HABILITAR_REFLECTION_GRPC e os logs da API.' }
-    pnpm smoke:grpc:auth
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host 'Diagnóstico seguro da API:' -ForegroundColor Yellow
-        docker logs lcr-api --tail 120 2>&1 | Select-String 'falha_validacao_jwt' | ForEach-Object { Write-Host $_ }
-        throw 'Smoke autenticado falhou. Verifique o diagnóstico acima, o realm Keycloak e as permissões LCR.'
+    if ($SmokeAutenticado) {
+        pnpm smoke:grpc:auth
+        if ($LASTEXITCODE -ne 0) { throw 'Smoke autenticado falhou. Defina GRPC_SMOKE_EMAIL e GRPC_SMOKE_PASSWORD e confirme que a conta existe.' }
     }
 }
 

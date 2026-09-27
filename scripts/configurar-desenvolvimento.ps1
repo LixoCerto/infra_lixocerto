@@ -38,7 +38,7 @@ function New-Secret([int]$Bytes = 32) {
 
 function Ensure-Value([string]$Name, [string]$DefaultValue, [switch]$Secret) {
     $atual = Get-EnvValue $Name
-    $deveGerar = [string]::IsNullOrWhiteSpace($atual) -or $atual -match '^(alterar_|seu-provedor|https://.*example)'
+    $deveGerar = [string]::IsNullOrWhiteSpace($atual) -or $atual -match '^(alterar_|gerar-com|seu-provedor|https://.*example)'
     if ($deveGerar) {
         Set-EnvValue $Name ($(if ($Secret) { New-Secret } else { $DefaultValue }))
     }
@@ -63,6 +63,9 @@ Ensure-Value 'KEYCLOAK_DEV_ADMIN_PASSWORD' 'local-keycloak-administrador' -Secre
 Ensure-Value 'KEYCLOAK_VOLUME_NAME' 'lcr-keycloak-data'
 Ensure-Value 'MAILPIT_WEB_PORT' '8025'
 Ensure-Value 'SMTP_FROM' 'nao-responda@lixo-certo.local'
+Ensure-Value 'SEGREDO_JWT' 'local-segredo-jwt' -Secret
+Ensure-ExactValue 'EMISSOR_JWT' 'lixo-certo-api'
+Ensure-ExactValue 'AUDIENCIA_JWT' 'lixo-certo-client'
 Ensure-ExactValue 'AMBIENTE_EXECUCAO' 'desenvolvimento'
 Ensure-ExactValue 'VITE_OIDC_ISSUER' 'http://localhost:8081/realms/lixo-certo'
 Ensure-ExactValue 'VITE_OIDC_CLIENT_ID' 'lixo-certo-frontend'
@@ -80,7 +83,7 @@ Ensure-ExactValue 'DOMINIO_EMAIL_OIDC_DESENVOLVIMENTO' 'lixo-certo.local'
 $utf8SemBOM = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($envPath, ($linhas -join [Environment]::NewLine), $utf8SemBOM)
 
-Write-Host 'Ambiente local OIDC configurado para o Keycloak.' -ForegroundColor Green
+Write-Host 'Ambiente local configurado para JWT próprio da API.' -ForegroundColor Green
 Write-Host "Arquivo local: $envPath"
 Write-Host "Usuário comum: $(Get-EnvValue 'KEYCLOAK_DEV_USER_USERNAME')"
 Write-Host "Usuário administrador: $(Get-EnvValue 'KEYCLOAK_DEV_ADMIN_USERNAME')"
