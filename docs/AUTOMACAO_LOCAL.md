@@ -28,7 +28,7 @@ pnpm migrar
 pnpm semear
 ```
 
-Não execute esses comandos apontando para outro banco sem conferir `URL_BANCO_DADOS`. Não faça rollback ou `down -v` no banco externo.
+Não execute esses comandos apontando para outro banco sem conferir `BANCO_DADOS_HOST/PORTA/USUARIO/SENHA/NOME`. Não faça rollback ou `down -v` no banco externo.
 
 ## Ciclo de conta local
 

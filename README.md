@@ -61,7 +61,7 @@ frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
                               JWT próprio / papéis / permissões
 ```
 
-A API recebe `URL_REDIS=redis://:senha@cache:6379` internamente, assina e valida JWT com `SEGREDO_JWT` e mantém `URL_BANCO_DADOS` vindo do arquivo privado da API.
+A API recebe `REDIS_HOST=cache, REDIS_PORT=6379, REDIS_PASSWORD=senha, REDIS_DB=0` internamente, assina e valida JWT com `SEGREDO_JWT` e mantém `BANCO_DADOS_HOST/PORTA/USUARIO/SENHA/NOME` vindo do arquivo privado da API.
 
 ## Automação local e Postman
 

@@ -7,13 +7,21 @@ services:
     restart: unless-stopped
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada no arquivo .env}
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada no arquivo .env}"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD deve ser configurada no arquivo .env}",
+      ]
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      test:
+        ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,13 +57,17 @@ services:
       SEGREDO_JWT: ${SEGREDO_JWT:?SEGREDO_JWT deve ser configurado no arquivo .env}
       EMISSOR_JWT: ${EMISSOR_JWT:-lixo-certo-api}
       AUDIENCIA_JWT: ${AUDIENCIA_JWT:-lixo-certo-client}
-      URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
-      URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
+      REDIS_HOST: cache
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: "0"
+      REDIS_TESTE_HOST: cache
+      REDIS_TESTE_PORT: "6379"
+      REDIS_TESTE_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_TESTE_DB: "15"
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}
       # E-mail transacional: configurado em api_lixocerto/.env (env_file acima).
-      # Estas variáveis NÃO são redefinidas aqui de propósito: `environment` tem
-      # precedência sobre `env_file`, então um valor padrão vazio anularia
-      # PROVEDOR_EMAIL e RESEND_CHAVE_API e derrubaria o envio real.
+      # Estas variáveis NÃO são redefinidas aqui de propósito.
     depends_on:
       cache:
         condition: service_healthy
@@ -126,7 +138,7 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: 10m
+        max-size: 20m
         max-file: "3"
 
 volumes:
