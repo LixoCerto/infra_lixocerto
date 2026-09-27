@@ -1,8 +1,13 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadSync } from '@grpc/proto-loader';
 
-const arquivo = resolve(process.argv[2] ?? '../api-lixo-certo/docs/postman/Lixo-Certo-API.postman.proto');
+const raizInfra = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const argumento = process.argv.slice(2).find((valor) => valor !== '--');
+const arquivo = resolve(
+  argumento ?? resolve(raizInfra, '../api_lixocerto/docs/postman/Lixo-Certo-API.postman.proto'),
+);
 const raizContratos = resolve(dirname(arquivo), '..', '..', 'contratos');
 
 if (!existsSync(arquivo)) {

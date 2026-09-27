@@ -1,6 +1,20 @@
 name: lixo-certo
 
 services:
+  cache-init:
+    image: redis:7.4-alpine
+    container_name: lcr-cache-init
+    user: "0:0"
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /data/appendonlydir && chown -R 999:999 /data && chmod -R u+rwX /data",
+      ]
+    volumes:
+      - redis_data:/data
+    restart: "no"
+
   cache:
     image: redis:7.4-alpine
     container_name: lcr-cache
@@ -17,6 +31,9 @@ services:
       - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    depends_on:
+      cache-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG']

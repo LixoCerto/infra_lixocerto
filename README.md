@@ -20,6 +20,7 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 ## Responsabilidades
 
+- `cache-init`: inicializa e corrige a propriedade do volume Redis antes do processo não-root;
 - `cache`: Redis local protegido por senha, AOF, volume persistente e healthcheck;
 - `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo;
 - `gateway`: Envoy converte gRPC-Web do navegador para gRPC na API;
@@ -97,6 +98,8 @@ authorization: Bearer {{jwt_token}}
 As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas. O frontend recebe apenas a variável pública `VITE_API_BASE_URL`; o Redis recebe o arquivo da API para obter sua senha de desenvolvimento. O server reflection deve ficar desabilitado em produção.
 
 O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes destrutivos contra a base principal.
+
+O serviço `cache` recebe `REDIS_PASSWORD` exclusivamente de `../api_lixocerto/.env` por meio de `env_file`. O serviço `cache-init` não recebe nem precisa de credenciais: ele somente prepara as permissões do volume persistente.
 
 ## Parada e limpeza
 
