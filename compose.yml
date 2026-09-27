@@ -52,6 +52,13 @@ services:
       URL_REDIS: redis://:${REDIS_PASSWORD}@cache:6379
       URL_REDIS_TESTE: redis://:${REDIS_PASSWORD}@cache:6379/15
       ORIGENS_PERMITIDAS: ${ORIGENS_PERMITIDAS:-http://localhost:3000}
+      # E-mail transacional. A chave do Resend permanece somente na API.
+      # Em desenvolvimento, PROVEDOR_EMAIL=log registra apenas metadados no log.
+      PROVEDOR_EMAIL: ${PROVEDOR_EMAIL:-resend}
+      RESEND_CHAVE_API: ${RESEND_CHAVE_API:-}
+      EMAIL_REMETENTE: ${EMAIL_REMETENTE:-}
+      EMAIL_NOME_REMETENTE: ${EMAIL_NOME_REMETENTE:-Lixo Certo}
+      URL_PUBLICA_FRONTEND: ${URL_PUBLICA_FRONTEND:-http://localhost:3000}
     depends_on:
       cache:
         condition: service_healthy
