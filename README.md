@@ -20,8 +20,8 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 ## Responsabilidades
 
-- `cache-init`: inicializa e corrige a propriedade do volume Redis antes do processo não-root;
-- `cache`: Redis local protegido por senha, AOF, volume persistente e healthcheck;
+- `cache-init`: inicializa o diretório AOF e ajusta o volume para o UID/GID não-root do Redis (999:1000);
+- `cache`: Redis local protegido por senha, executado como UID/GID 999:1000, com AOF, volume persistente e healthcheck;
 - `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo; o healthcheck confirma que a porta gRPC está aceitando conexões;
 - `gateway`: Envoy converte gRPC-Web do navegador para gRPC na API;
 - `frontend`: bundle React/Vite servido pelo Nginx, sem Node em runtime e sem banco próprio.
