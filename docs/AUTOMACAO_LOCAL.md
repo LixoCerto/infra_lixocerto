@@ -14,9 +14,9 @@ No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-Esse comando valida os `.env` da API e do frontend, constrói os quatro serviços Docker, aguarda healthchecks, prepara os contratos no diretório do Postman e executa smoke público e reflection. A infraestrutura não cria nem mantém um `.env` próprio.
+O Compose referencia automaticamente `..\api_lixocerto\.env` e `..\frontend_lixocerto\.env`. A infraestrutura não cria nem mantém `.env` próprio.
 
-O configurador apenas valida se os valores obrigatórios já existem nos `.env` da API e do frontend. Os valores não são impressos.
+O `.env` da API fornece PostgreSQL, Redis, JWT e e-mail. O `.env` do frontend fornece `VITE_API_BASE_URL=/api/rpc`, que é incorporada ao bundle durante o build.
 
 ## Banco externo
 
@@ -66,12 +66,6 @@ Remove-Item Env:GRPC_SMOKE_EMAIL, Env:GRPC_SMOKE_PASSWORD -ErrorAction SilentlyC
 ```
 
 Nunca grave essas variáveis no Git ou em `.env` versionado.
-
-## Arquivos preparados para o Postman
-
-O diretório padrão é `%USERPROFILE%\Postman\files\lixo-certo` e contém contratos, definição raiz, ambiente, catálogo de 26 métodos e README. O catálogo não é uma Collection JSON importável: ele evita que uma requisição HTTP `POST` com URL `grpc://` seja confundida com gRPC nativo.
-
-Após iniciar a aplicação, abra o Postman Desktop, selecione o ambiente, use **New > gRPC**, `grpc://{{grpc_host}}`, escolha o método e salve com **Save As**. O botão de execução deve aparecer como **Invoke**.
 
 ## Validação esperada
 

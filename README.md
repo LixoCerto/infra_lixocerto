@@ -37,19 +37,26 @@ G:\LixoCerto\api_lixocerto
 G:\LixoCerto\frontend_lixocerto
 ```
 
-A API deve possuir `.env` privado com PostgreSQL, Redis, JWT e e-mail. O frontend deve possuir seu próprio `.env` com `VITE_API_BASE_URL`. A infraestrutura não possui `.env` próprio: o Compose carrega diretamente os dois arquivos dos projetos irmãos.
+A API deve possuir `.env` privado com PostgreSQL, Redis, JWT e e-mail. O frontend deve possuir seu próprio `.env` com `VITE_API_BASE_URL`. A infraestrutura não possui `.env` próprio: o Compose referencia diretamente os dois arquivos dos projetos irmãos.
 
 ## Configuração e execução
 
-No PowerShell:
+No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
 
 ```powershell
-cd G:\LixoCerto\infra_lixocerto
 .\scripts\configurar-desenvolvimento.ps1
-docker compose --env-file ..\api_lixocerto\.env --env-file ..\frontend_lixocerto\.env -f compose.yml --profile app up -d --build
+.\scripts\iniciar.ps1 -Aplicacao
 ```
 
-O fluxo integrado é:
+Ou diretamente, sem `--env-file`:
+
+```powershell
+docker compose -f compose.yml --profile app up -d --build
+```
+
+O `compose.yml` carrega automaticamente `..\api_lixocerto\.env` para a API e o Redis, e o Dockerfile do frontend carrega `..\frontend_lixocerto\.env` durante o build do Vite.
+
+## Fluxo integrado
 
 ```text
 http://localhost:3000
@@ -61,7 +68,7 @@ frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
                               JWT próprio / papéis / permissões
 ```
 
-A API recebe `REDIS_HOST=cache`, `REDIS_PORT=6379` e os segredos vindos de `../api_lixocerto/.env`. O bundle do frontend recebe `VITE_API_BASE_URL` de `../frontend_lixocerto/.env`.
+O frontend utiliza somente `VITE_API_BASE_URL=/api/rpc`. Os segredos e credenciais permanecem exclusivamente no `.env` da API.
 
 ## Automação local e Postman
 
@@ -71,7 +78,7 @@ Para subir o ambiente, preparar os contratos, executar smoke tests e mostrar o e
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-A preparação copia a definição raiz Protobuf, o ambiente e o catálogo de 26 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção HTTP histórica. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa. O manifesto é catálogo, não Collection JSON importável.
+A preparação copia a definição raiz Protobuf, o ambiente e o catálogo de 26 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção HTTP histórica. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa.
 
 Para preencher o ambiente local do Postman usando a autenticação própria:
 
@@ -79,7 +86,7 @@ Para preencher o ambiente local do Postman usando a autenticação própria:
 .\scripts\obter-token-postman.ps1 -Email 'usuario@exemplo.test'
 ```
 
-O script solicita a senha sem colocá-la na linha de comando, chama `Entrar` pelo gRPC e grava os tokens somente no arquivo local do Postman. Em requisições protegidas, mantenha o metadado:
+Em requisições protegidas, mantenha o metadado:
 
 ```text
 authorization: Bearer {{jwt_token}}
@@ -87,7 +94,7 @@ authorization: Bearer {{jwt_token}}
 
 ## Segurança
 
-As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas; a API e o Nginx não recebem o `.env` privado da API; o frontend usa apenas `VITE_API_BASE_URL` durante o build; e os Dockerfiles copiam somente os diretórios necessários. O server reflection é facilidade de desenvolvimento local e deve ficar desabilitado em produção.
+As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas. O frontend recebe apenas a variável pública `VITE_API_BASE_URL`; o Redis recebe o arquivo da API para obter sua senha de desenvolvimento. O server reflection deve ficar desabilitado em produção.
 
 O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes destrutivos contra a base principal.
 
@@ -101,7 +108,6 @@ Para logs:
 
 ```powershell
 .\scripts\logs.ps1 -Servico api
-.\scripts\logs.ps1 -Servico gateway
 ```
 
-Não use `down -v` quando não quiser remover o volume local do Redis.
+Não use `docker compose down -v` quando não quiser remover o volume local do Redis.

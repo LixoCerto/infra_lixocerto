@@ -8,9 +8,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM dependencias AS compilacao
 WORKDIR /app
-ARG VITE_API_BASE_URL=/api/rpc
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-COPY package.json pnpm-lock.yaml vite.config.ts tsconfig.json buf.yaml buf.gen.yaml ./
+COPY package.json pnpm-lock.yaml vite.config.ts tsconfig.json buf.yaml buf.gen.yaml .env ./
 COPY client ./client
 COPY shared ./shared
 COPY proto ./proto

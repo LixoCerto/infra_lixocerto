@@ -15,16 +15,12 @@ function garantir(condicao, mensagem) {
 }
 
 garantir(
-  compose.includes("SEGREDO_JWT:"),
-  "Compose não passa SEGREDO_JWT para a API.",
+  compose.includes("../api_lixocerto/.env"),
+  "Compose não carrega o .env da API.",
 );
 garantir(
-  compose.includes("EMISSOR_JWT:"),
-  "Compose não passa EMISSOR_JWT para a API.",
-);
-garantir(
-  compose.includes("AUDIENCIA_JWT:"),
-  "Compose não passa AUDIENCIA_JWT para a API.",
+  compose.includes("REDIS_HOST: cache"),
+  "Compose não ajusta REDIS_HOST para o serviço cache.",
 );
 garantir(
   ambiente.includes("SEGREDO_JWT="),
@@ -47,6 +43,21 @@ garantir(
   "API ainda recebe ENDERECO_JWKS do Compose.",
 );
 
+garantir(
+  !compose.includes("--env-file"),
+  "Compose não deve exigir --env-file externo.",
+);
+
+garantir(
+  !compose.includes("SEGREDO_JWT:"),
+  "SEGREDO_JWT não deve ser duplicado no Compose.",
+);
+
+garantir(
+  !compose.includes("VITE_API_BASE_URL:"),
+  "VITE_API_BASE_URL deve vir do .env do frontend durante o build.",
+);
+
 console.log(
-  "Autenticação local: Compose, JWT próprio, login gRPC e smoke autenticado validados.",
+  "Autenticação local: Compose, env_file da API, JWT próprio, login gRPC e smoke autenticado validados.",
 );

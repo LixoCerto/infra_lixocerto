@@ -10,12 +10,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
 & (Join-Path $PSScriptRoot 'configurar-desenvolvimento.ps1')
-
-$compose = @(
-    '--env-file', '..\api_lixocerto\.env',
-    '--env-file', '..\frontend_lixocerto\.env',
-    '-f', 'compose.yml'
-)
+$compose = @('-f', 'compose.yml')
 if ($Aplicacao) {
     $compose += @('--profile', 'app')
     docker compose @compose up -d --build

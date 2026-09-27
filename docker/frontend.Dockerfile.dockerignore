@@ -4,8 +4,8 @@ pnpm-debug.log*
 dist
 coverage
 .git
-.env
 .env.*
+!.env
 !.env.exemplo
 .manus-logs
 *.log
