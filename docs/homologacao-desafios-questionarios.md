@@ -3,7 +3,7 @@
 **Projeto:** LixoCerto
 **Escopo:** CRUD administrativo e jornada do usuário em Desafios e Quiz/Questionários, além da gestão de usuários, papéis, permissões e auditoria
 **Ambiente-alvo:** notebook Windows com Docker Compose e banco de desenvolvimento
-**Commits esperados:** API `54efce8`; frontend `8f1e91b`. Este roteiro foi atualizado no repositório de infraestrutura; confira o `git log -1 --oneline` desse repositório após o pull.
+**Commits esperados:** API `fix: alinhar TLS das migrations à API`; frontend `8f1e91b`. Este roteiro foi atualizado no repositório de infraestrutura; confira o `git log -1 --oneline` desse repositório após aplicá-lo/puxá-lo.
 
 ## 1. Objetivo e limites
 
@@ -21,6 +21,7 @@ O script `infra_lixocerto/scripts/iniciar.ps1` chama `pnpm smoke:grpc`, `pnpm sm
 
 - Os três repositórios locais estão em `main`, sem alterações locais que precisem ser preservadas antes do pull.
 - `.env` da API aponta para o **banco de desenvolvimento correto**; não imprimir nem compartilhar seu conteúdo.
+- A API e o Sequelize CLI usam `BANCO_DADOS_SSL` de forma consistente: `true` ativa TLS com validação de certificado; ausente ou diferente de `true` não ativa TLS. Use o valor exigido pelo provedor/endpoint do banco; não desligue TLS em banco remoto que o exige.
 - Contas de teste ativas e verificadas: uma de administrador/revisor e uma de usuário comum.
 - Redis, PostgreSQL, Docker Desktop e dependências da aplicação disponíveis.
 - Acesso à interface em `http://localhost:3000`.
@@ -51,11 +52,11 @@ git -C .\api_lixocerto log -1 --oneline
 git -C .\frontend_lixocerto log -1 --oneline
 ```
 
-Confirme que aparecem os commits `b61b459` (API) e `bdee796` (frontend). Se o `pull --ff-only` parar por divergência, não force; interrompa e investigue a branch local.
+Confirme que a API mostra o commit `fix: alinhar TLS das migrations à API` e o frontend `8f1e91b`. Se o `pull --ff-only` parar por divergência, não force; interrompa e investigue a branch local.
 
 ## 5. Build, migrations e subida seletiva
 
-As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor` e `031_adicionar_permissao_gerenciar_acessos` habilitam as permissões desta fase. A 031 cria a permissão exclusiva de gestão de acessos e a atribui ao papel administrador ativo. Para banco existente, **não rode `db:seed:all` para esta atualização**; aplique apenas migrations pendentes pelo Sequelize. O seed 001 atualizado é destinado à inicialização de banco novo.
+As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor` e `031_adicionar_permissao_gerenciar_acessos` habilitam as permissões desta fase. A 031 cria a permissão exclusiva de gestão de acessos e a atribui ao papel administrador ativo. Para banco existente, **não rode `db:seed:all` para esta atualização**; aplique apenas migrations pendentes pelo Sequelize. O seed 001 atualizado é destinado à inicialização de banco novo. A configuração de `db:migrate` respeita `BANCO_DADOS_SSL` tal como a conexão da API, mantendo `rejectUnauthorized: true` quando o TLS estiver habilitado.
 
 ```powershell
 Set-Location G:\LixoCerto\infra_lixocerto
