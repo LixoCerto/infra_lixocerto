@@ -59,6 +59,19 @@ O `compose.yml` carrega automaticamente `..\api_lixocerto\.env` para a API e o R
 
 O gateway só inicia depois que a API passa no healthcheck gRPC. Durante uma inicialização fria, consulte `docker compose -f compose.yml ps` e aguarde `healthy` para a API antes de investigar falhas de conexão; o healthcheck permite até três minutos para a primeira inicialização e não reinicia nem encerra a API.
 
+## Migrações e seeds do banco
+
+O Compose não aplica migrations automaticamente. Depois de atualizar o código, confirme primeiro que o `.env` privado da API aponta para o banco de desenvolvimento correto. Aplique a sequência abaixo: build das imagens alteradas, migrations/seeds em containers one-off da imagem nova e, só então, recriação da API/frontend. Os comandos de banco usam as mesmas variáveis do `.env` da API:
+
+```powershell
+docker compose -f compose.yml --profile app build --no-cache api frontend
+docker compose -f compose.yml --profile app run --rm --no-deps api node_modules/.bin/sequelize-cli db:migrate --config configuracao_sequelize.cjs --migrations-path banco/migracoes
+docker compose -f compose.yml --profile app run --rm --no-deps api node_modules/.bin/sequelize-cli db:seed:all --config configuracao_sequelize.cjs --seeders-path banco/dados_iniciais
+docker compose -f compose.yml --profile app up -d --no-deps --force-recreate api frontend
+```
+
+O Dockerfile da API inclui migrations e seeds na imagem para esse uso manual. Os seeds devem ser idempotentes; não execute `db:seed:undo:all` nem migrations `down` para aplicar uma atualização normal.
+
 ## Fluxo integrado
 
 ```text
@@ -99,7 +112,7 @@ authorization: Bearer {{jwt_token}}
 
 As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas. O frontend recebe apenas a variável pública `VITE_API_BASE_URL`; o Redis recebe o arquivo da API para obter sua senha de desenvolvimento. O server reflection deve ficar desabilitado em produção.
 
-O PostgreSQL externo não é criado, destruído ou migrado pelo Compose. Não execute testes destrutivos contra a base principal.
+O PostgreSQL externo não é criado nem destruído pelo Compose; migrations são sempre manuais. Não execute migrations de desenvolvimento nem testes destrutivos contra a base principal.
 
 O serviço `cache` recebe `REDIS_PASSWORD` exclusivamente de `../api_lixocerto/.env` por meio de `env_file`. O serviço `cache-init` não recebe nem precisa de credenciais: ele somente prepara as permissões do volume persistente.
 
