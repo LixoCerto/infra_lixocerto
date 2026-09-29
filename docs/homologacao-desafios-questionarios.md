@@ -3,7 +3,7 @@
 **Projeto:** LixoCerto
 **Escopo:** CRUD administrativo e jornada do usuário em Desafios e Quiz/Questionários, além da gestão de usuários, papéis, permissões e auditoria
 **Ambiente-alvo:** notebook Windows com Docker Compose e banco de desenvolvimento
-**Commits esperados:** API `fix: alinhar TLS das migrations à API`; frontend `8f1e91b`. Este roteiro foi atualizado no repositório de infraestrutura; confira o `git log -1 --oneline` desse repositório após aplicá-lo/puxá-lo.
+**Versões:** use `main` nos três repositórios e confira `git log -1 --oneline` em cada um após o pull. A API inclui o seeder separado de contas de homologação descrito em `docs/CONTAS_HOMOLOGACAO.md`.
 
 ## 1. Objetivo e limites
 
@@ -22,7 +22,7 @@ O script `infra_lixocerto/scripts/iniciar.ps1` chama `pnpm smoke:grpc`, `pnpm sm
 - Os três repositórios locais estão em `main`, sem alterações locais que precisem ser preservadas antes do pull.
 - `.env` da API aponta para o **banco de desenvolvimento correto**; não imprimir nem compartilhar seu conteúdo.
 - A API e o Sequelize CLI usam `BANCO_DADOS_SSL` de forma consistente: `true` ativa TLS com validação de certificado; ausente ou diferente de `true` não ativa TLS. Use o valor exigido pelo provedor/endpoint do banco; não desligue TLS em banco remoto que o exige.
-- Contas de teste ativas e verificadas: uma de administrador/revisor e uma de usuário comum.
+- Contas de homologação: execute o seeder isolado `pnpm semear:homologacao` documentado em `api_lixocerto/docs/CONTAS_HOMOLOGACAO.md` para criar usuário, pesquisador e revisor; o seeder preserva as contas administrativas existentes.
 - Redis, PostgreSQL, Docker Desktop e dependências da aplicação disponíveis.
 - Acesso à interface em `http://localhost:3000`.
 
