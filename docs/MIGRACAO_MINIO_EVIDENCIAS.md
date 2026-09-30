@@ -85,10 +85,10 @@ O bootstrap aguarda o serviço, cria o bucket privado e provisiona a identidade 
 ```powershell
 # Não altera objetos. Confere conexão, referências ativas, existência dos arquivos locais,
 # chaves UUID, tamanhos e hashes registrados no banco.
-docker compose -f compose.yml --profile app --profile maintenance run --rm --no-deps evidencia-migration --dry-run
+docker compose -f compose.yml --profile app --profile maintenance run --rm evidencia-migration --dry-run
 
 # Só execute se o dry-run terminar com exit code 0.
-docker compose -f compose.yml --profile app --profile maintenance run --rm --no-deps evidencia-migration
+docker compose -f compose.yml --profile app --profile maintenance run --rm evidencia-migration
 ```
 
 O resultado informa apenas contagens e bytes; não lista nomes de participantes nem conteúdo das fotos. `migracao_verificada` significa que todos os objetos ativos referenciados foram encontrados, validados contra os metadados quando disponíveis, gravados ou conferidos no MinIO e lidos de volta com SHA-256 igual. Se houver erro, mantenha a API parada e o volume legado intacto; resolva a causa antes de tentar novamente.
