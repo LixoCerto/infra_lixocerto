@@ -95,10 +95,10 @@ O resultado informa apenas contagens e bytes; não lista nomes de participantes 
 
 ### 5. Trocar a API e verificar
 
-Depois da migração bem-sucedida, recrie API e frontend. O volume MinIO permanece montado em `lcr-minio-data`:
+Depois da migração bem-sucedida, recrie somente a API, que é o componente alterado. O frontend permanece em execução e não precisa ser reconstruído nesta mudança. O volume MinIO fica montado em `lcr-minio-data`:
 
 ```powershell
-docker compose -f compose.yml --profile app up -d --no-deps --force-recreate api frontend
+docker compose -f compose.yml --profile app up -d --no-deps --force-recreate api
 Start-Sleep -Seconds 20
 docker compose -f compose.yml --profile app ps
 curl.exe -I http://localhost:3000/

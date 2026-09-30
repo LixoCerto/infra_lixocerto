@@ -323,6 +323,6 @@ Depois de aplicar a migration 033 e criar as tabelas, execute seletivamente os s
 
 ## 12. Migração local das evidências para MinIO
 
-A imagem local escolhida é `minio/minio:latest`. Antes de atualizar a API, siga o roteiro completo [`MIGRACAO_MINIO_EVIDENCIAS.md`](MIGRACAO_MINIO_EVIDENCIAS.md): gerar os arquivos locais de credenciais com `PrepararMinio.ps1`, fazer backup, parar a API, iniciar MinIO e bootstrap, rodar primeiro `evidencia-migration --dry-run`, copiar e verificar cada SHA-256, e só então recriar API/frontend. A cópia mantém o volume `lcr-descartes-evidencias` intacto; não rode `docker compose down -v` nem `docker volume prune`.
+A imagem local escolhida é `minio/minio:latest`. Antes de atualizar a API, siga o roteiro completo [`MIGRACAO_MINIO_EVIDENCIAS.md`](MIGRACAO_MINIO_EVIDENCIAS.md): gerar os arquivos locais de credenciais com `PrepararMinio.ps1`, fazer backup, parar a API, iniciar MinIO e bootstrap, rodar primeiro `evidencia-migration --dry-run`, copiar e verificar cada SHA-256, e só então recriar somente a API (o frontend não mudou nesta etapa). A cópia mantém o volume `lcr-descartes-evidencias` intacto; não rode `docker compose down -v` nem `docker volume prune`.
 
 A migração não exige migration de banco adicional: usa a tabela e as chaves adicionadas pela migration 034, preservando UUIDs e metadados existentes. Se o dry-run falhar, não aponte a API ao S3 e mantenha a versão/volume locais para investigar.
