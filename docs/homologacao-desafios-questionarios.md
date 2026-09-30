@@ -319,3 +319,10 @@ Depois de aplicar a migration 033 e criar as tabelas, execute seletivamente os s
 **Pré-condições:** migration 034 aplicada; ponto marcado como verificado, com coordenadas e categorias aceitas; navegador com permissão de localização; teste em ambiente local/desenvolvimento.
 **Passos:** no cartão do ponto, escolher **Iniciar descarte**; testar uma localização a mais de 5 m ou com precisão reportada acima de 10 m; depois, no local correto, iniciar novo check-in, selecionar uma ou mais categorias aceitas e anexar uma foto distinta para cada categoria; enviar e, como outro revisor, abrir a evidência e aprovar. Testar também um envio sem foto, uma categoria não aceita, um segundo acesso à foto como outra conta comum e a rejeição de um registro válido.
 **Esperado:** o servidor recusa fora do raio/precisão sem criar check-in válido; o check-in aceito expira em 30 minutos; faltas ou incompatibilidade bloqueiam o envio; cada foto fica vinculada apenas à categoria escolhida; submissão resulta em `pendente` e 0 pontos; só outro revisor autorizado acessa a imagem; aprovação concede 20 pontos por categoria uma única vez, rejeição concede 0, e registros legados sem check-in/foto não podem ser aprovados. Fotos e coordenadas não aparecem em logs/auditoria, expiram 90 dias após a decisão, e o expurgo físico roda ao menos a cada 10 minutos.
+
+
+## 12. Migração local das evidências para MinIO
+
+A imagem local escolhida é `minio/minio:latest`. Antes de atualizar a API, siga o roteiro completo [`MIGRACAO_MINIO_EVIDENCIAS.md`](MIGRACAO_MINIO_EVIDENCIAS.md): gerar os arquivos locais de credenciais com `PrepararMinio.ps1`, fazer backup, parar a API, iniciar MinIO e bootstrap, rodar primeiro `evidencia-migration --dry-run`, copiar e verificar cada SHA-256, e só então recriar API/frontend. A cópia mantém o volume `lcr-descartes-evidencias` intacto; não rode `docker compose down -v` nem `docker volume prune`.
+
+A migração não exige migration de banco adicional: usa a tabela e as chaves adicionadas pela migration 034, preservando UUIDs e metadados existentes. Se o dry-run falhar, não aponte a API ao S3 e mantenha a versão/volume locais para investigar.
