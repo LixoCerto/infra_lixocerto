@@ -60,8 +60,7 @@ services:
     container_name: lcr-minio-data-init
     user: "0:0"
     restart: "no"
-    entrypoint: ["/bin/sh", "-ec"]
-    command: "mkdir -p /data && chown 10001:10001 /data"
+    entrypoint: ["/bin/sh", "-ec", "mkdir -p /data && chown 10001:10001 /data"]
     volumes:
       - minio_data:/data
     security_opt:
