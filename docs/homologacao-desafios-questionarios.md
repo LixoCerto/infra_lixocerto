@@ -65,26 +65,26 @@ Set-Location G:\LixoCerto\infra_lixocerto
 docker compose -f compose.yml --profile app build --no-cache api frontend
 
 # Verificar o estado das migrations no banco configurado no .env da API
-docker compose -f compose.yml --profile app run --rm --no-deps api `
-  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:migrate:status `
+docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
+  node_modules/sequelize-cli/lib/sequelize db:migrate:status `
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
 # Aplicar apenas migrations pendentes
-docker compose -f compose.yml --profile app run --rm --no-deps api `
-  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:migrate `
+docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
+  node_modules/sequelize-cli/lib/sequelize db:migrate `
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
 # Repetir status; 029, 030 e 031 devem constar como aplicadas
-docker compose -f compose.yml --profile app run --rm --no-deps api `
-  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:migrate:status `
+docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
+  node_modules/sequelize-cli/lib/sequelize db:migrate:status `
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
 # Atualizar somente a matriz RBAC base; não executar db:seed:all
-docker compose -f compose.yml --profile app run --rm --no-deps api `
-  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:seed `
+docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
+  node_modules/sequelize-cli/lib/sequelize db:seed `
     --seed 001_inserir_papeis_permissoes.cjs `
     --config configuracao_sequelize.cjs `
     --seeders-path banco/dados_iniciais
