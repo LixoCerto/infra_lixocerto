@@ -2,11 +2,13 @@
 
 ## Decisão de armazenamento
 
-A API passa a usar o serviço local `minio/minio:latest`, mesma referência do Compose fornecido pelo responsável do projeto. MinIO não é exposto à rede pública: a API usa `http://minio:9000` na rede Docker e as portas para a máquina local ficam limitadas a `127.0.0.1` (`9000` S3 e `9001` console). O bucket `lcr-evidencias-descartes` é privado.
+A API passa a usar uma imagem local própria do MinIO Community, compilada do [código-fonte oficial](https://github.com/minio/minio/tree/RELEASE.2025-10-15T17-29-55Z) no commit `9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a` (`RELEASE.2025-10-15T17-29-55Z`). O cliente `mc` também é compilado localmente do [código-fonte oficial](https://github.com/minio/mc/tree/RELEASE.2025-08-13T08-35-41Z) no commit `7394ce0dd2a80935aded936b09fa12cbb3cb8096` (`RELEASE.2025-08-13T08-35-41Z`). Os Dockerfiles validam cada SHA durante o build; os nomes de imagem locais não tentam fazer pull de `minio/minio` nem `minio/mc`. Isso contorna a indisponibilidade do registry, mas **não restaura manutenção upstream**. MinIO Community e `mc` estão sob AGPLv3; o upstream está arquivado/sem manutenção e sem atualizações oficiais. Não é AIStor e não requer sua licença; compile/use sob sua própria avaliação de risco e obrigações da licença.
+
+MinIO não é exposto à rede pública: a API usa `http://minio:9000` na rede Docker e as portas para a máquina local ficam limitadas a `127.0.0.1` (`9000` S3 e `9001` console). O bucket `lcr-evidencias-descartes` é privado. O build baixa as bases Debian/Go e o código upstream via GitHub; não baixa MinIO de um registry.
 
 O usuário root do MinIO fica em `.env.minio-root`; a API recebe somente uma chave de serviço separada, com permissões restritas ao bucket. `PrepararMinio.ps1` gera os segredos localmente, sem imprimi-los. Esses arquivos são ignorados pelo Git. Não os envie em mensagens, anexos ou capturas, e não use o usuário root da console na API.
 
-A referência `latest` foi mantida conforme a escolha expressa do usuário, mas é uma tag mutável; para reproduzir exatamente uma instalação no futuro, registre e fixe o digest da imagem que foi homologada. A disponibilidade/atualização da imagem depende do registry e do fornecedor; um Compose local válido não garante que o registry ainda publique atualizações.
+As versões do servidor e do cliente são fixadas por release e SHA de commit. O `pull_policy: never` impede que Compose tente baixar os nomes locais das imagens; a etapa de build explícita abaixo é obrigatória. A imagem Go e a base Debian continuam identificadas por tags de versão upstream, e podem receber atualizações de base quando reconstruídas com `--pull`.
 
 ## O que é transferido
 
@@ -68,17 +70,19 @@ try {
 
 **Importante:** se o dump do banco ou o arquivo legado não puder ser validado, pare aqui. O volume original é uma cópia de segurança operacional; a rotina de migração não o remove.
 
-### 3. Construir API e inicializar MinIO, sem iniciar a API
+### 3. Construir localmente MinIO e `mc`, depois inicializar o serviço, sem iniciar a API
 
 ```powershell
-# Compila a API com o adapter S3 e o utilitário de migração.
-docker compose -f compose.yml --profile app build --no-cache api
+# Compila MinIO Community e o cliente mc a partir dos commits oficiais fixados.
+# O build pode demorar; exige acesso ao Docker Hub para bases Go/Debian e ao GitHub para o código.
+docker compose -f compose.yml --profile app build --pull --no-cache minio minio-bootstrap
 
-# Inicia apenas MinIO e o bootstrap de bucket/chave privada.
+# Inicia MinIO, prepara permissões do volume novo e executa o bootstrap do bucket/chave.
 docker compose -f compose.yml --profile app up -d minio minio-bootstrap
+docker compose -f compose.yml --profile app ps minio minio-data-init minio-bootstrap
 ```
 
-O bootstrap aguarda o serviço, cria o bucket privado e provisiona a identidade limitada da API. Se o bootstrap terminar com erro, não inicie a API; confira os logs sem copiar variáveis de ambiente ou credenciais.
+O Compose usa imagens locais `lixocerto-minio-community` e `lixocerto-minio-client`; não deve tentar baixar `minio/minio` ou `minio/mc`. O bootstrap aguarda o serviço, cria o bucket privado e provisiona a identidade limitada da API. Se a compilação ou o bootstrap terminar com erro, não inicie a API; confira os logs sem copiar variáveis de ambiente ou credenciais.
 
 ### 4. Validar referências e copiar, primeiro com dry-run
 

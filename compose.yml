@@ -54,11 +54,33 @@ services:
         max-size: 10m
         max-file: "3"
 
+  minio-data-init:
+    profiles: ["app"]
+    image: redis:7.4-alpine
+    container_name: lcr-minio-data-init
+    user: "0:0"
+    restart: "no"
+    entrypoint: ["/bin/sh", "-ec"]
+    command: "mkdir -p /data && chown 10001:10001 /data"
+    volumes:
+      - minio_data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+
   minio:
     profiles: ["app"]
-    image: minio/minio:latest
+    image: lixocerto-minio-community:RELEASE.2025-10-15T17-29-55Z
+    pull_policy: never
+    build:
+      context: ./docker
+      dockerfile: minio-server.Dockerfile
     container_name: lcr-minio
     restart: unless-stopped
+    user: "10001:10001"
     command: ["server", "/data", "--console-address", ":9001"]
     env_file:
       - ./.env.minio-root
@@ -67,6 +89,9 @@ services:
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
+    depends_on:
+      minio-data-init:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -79,9 +104,16 @@ services:
 
   minio-bootstrap:
     profiles: ["app"]
-    image: minio/mc:latest
+    image: lixocerto-minio-client:RELEASE.2025-08-13T08-35-41Z
+    pull_policy: never
+    build:
+      context: ./docker
+      dockerfile: minio-client.Dockerfile
     container_name: lcr-minio-bootstrap
     restart: "no"
+    user: "10001:10001"
+    tmpfs:
+      - /tmp
     env_file:
       - ./.env.minio-root
       - ./.env.storage-app
