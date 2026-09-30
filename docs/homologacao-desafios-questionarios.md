@@ -159,6 +159,18 @@ Use títulos inequívocos como `[HML] Questão fluxo completo 2026-09-29` e `[HM
 **Passos:** entrar em cada perfil e conferir abas/controles. Para validar proteção de backend, tentar chamar um RPC de gestão com a sessão de usuário comum em um cliente de teste, sem alterar conteúdo.
 **Esperado:** usuário comum não vê **Gerenciar** e a chamada direta recebe erro de autorização; revisor/admin pode listar e operar a gestão de desafios/questionários. Confirmar que as migrations 029, 030 e 031 estão aplicadas.
 
+### AUTH-02 — Áreas visíveis para cada perfil-base
+
+**Perfis:** uma conta de cada papel — `usuario`, `pesquisador`, `revisor` e `administrador`.
+**Passos:** sair e entrar separadamente com cada conta; comparar o menu com a matriz em `api_lixocerto/docs/CONTAS_HOMOLOGACAO.md`; tentar abrir pela navegação direta uma área que não consta para aquele perfil. Para o pesquisador, conferir que não existe aba de participação em desafios; para o usuário, confirmar que Pesquisa mostra o formulário, mas não os resultados agregados.
+**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas agregados SUS, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria.
+
+### AUTH-03 — Leitura e participação em desafios
+
+**Perfis:** pesquisador, usuário e revisor.
+**Passos:** usar uma sessão de pesquisador para tentar `ParticiparDesafio` e `RegistrarAcaoSustentavel` em um cliente gRPC de teste; em seguida, usar usuário para participar e registrar ação; no revisor, abrir gestão sem mostrar controles de participação.
+**Esperado:** `gamificacao:ler` isolada não autoriza mutações; API exige `gamificacao:participar` além da leitura; usuário consegue participar, pesquisador não vê a área e revisor fica somente na gestão.
+
 ### ADM-01 — Criar e editar papel personalizado
 
 **Perfil:** administrador.
@@ -210,6 +222,8 @@ Preencha durante o teste; não inclua senhas, tokens, cookies ou `.env`.
 | DES-02 — participação/pontuação |  |  |  |
 | DES-03 — bloqueios/histórico |  |  |  |
 | AUTH-01 — permissões |  |  |  |
+| AUTH-02 — visibilidade por perfil |  |  |  |
+| AUTH-03 — participação em desafios |  |  |  |
 | ADM-01 — CRUD de papéis |  |  |  |
 | ADM-02 — administrador protegido |  |  |  |
 | ADM-03 — usuários/último administrador |  |  |  |
@@ -221,4 +235,4 @@ Anexe apenas capturas sem credenciais e saídas sanitizadas de `docker compose p
 
 ## 9. Critério de conclusão
 
-A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029/030/031 estiverem aplicadas, nenhum segredo for exposto e API/frontend permanecerem saudáveis após reinício. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
+A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01/02/03, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029/030/031 estiverem aplicadas, o seed de permissões tiver sido reaplicado para frente e API/frontend permanecerem saudáveis após reinício. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
