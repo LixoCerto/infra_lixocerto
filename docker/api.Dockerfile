@@ -15,7 +15,7 @@ RUN pnpm contratos:validar && pnpm compilar
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-RUN groupadd --system --gid 10001 lcr && useradd --system --uid 10001 --gid lcr --home-dir /nonexistent --shell /usr/sbin/nologin lcr
+RUN groupadd --system --gid 10001 lcr && useradd --system --uid 10001 --gid lcr --home-dir /nonexistent --shell /usr/sbin/nologin lcr && install -d -o lcr -g lcr -m 0700 /app/.dados/evidencias-descartes
 COPY --from=dependencias --chown=lcr:lcr /app/node_modules ./node_modules
 COPY --from=compilacao --chown=lcr:lcr /app/dist ./dist
 COPY --from=compilacao --chown=lcr:lcr /app/contratos ./contratos

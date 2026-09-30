@@ -70,6 +70,8 @@ services:
       REDIS_TESTE_HOST: cache
       REDIS_TESTE_PORT: "6379"
       REDIS_TESTE_DB: "15"
+    volumes:
+      - descartes_evidencias:/app/.dados/evidencias-descartes
     depends_on:
       cache:
         condition: service_healthy
@@ -156,3 +158,5 @@ services:
 volumes:
   redis_data:
     name: lcr-redis-data
+  descartes_evidencias:
+    name: lcr-descartes-evidencias

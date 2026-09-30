@@ -56,7 +56,7 @@ Confirme com `git log -1 --oneline` que os três clones estão na versão espera
 
 ## 5. Build, migrations e subida seletiva
 
-As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor`, `031_adicionar_permissao_gerenciar_acessos`, `032_adicionar_dados_atendimento_pontos_coleta` e `033_engajamento_quizzes_selos_desafios` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** os seeders idempotentes indicados abaixo; eles não apagam dados. **Não rode `db:seed:all`**. A migration 033 adiciona o agendamento de quizzes individuais, ledger de pontos, selos, registro validável de descarte e ciclos/critério de desafios. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
+As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor`, `031_adicionar_permissao_gerenciar_acessos`, `032_adicionar_dados_atendimento_pontos_coleta`, `033_engajamento_quizzes_selos_desafios` e `034_checkin_evidencias_descartes` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** os seeders idempotentes indicados abaixo; eles não apagam dados. **Não rode `db:seed:all`**. A migration 033 adiciona quizzes individuais, ledger, selos, descartes e ciclos de desafios; a 034 adiciona check-in geográfico e metadados/retenção de evidências. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
 
 ```powershell
 Set-Location G:\LixoCerto\infra_lixocerto
@@ -76,7 +76,7 @@ docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
-# Repetir status; migrations 029 a 033 devem constar como aplicadas
+# Repetir status; migrations 029 a 034 devem constar como aplicadas
 docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
   node_modules/sequelize-cli/lib/sequelize db:migrate:status `
   --config configuracao_sequelize.cjs `
@@ -185,7 +185,7 @@ Use títulos inequívocos como `[HML] Questão fluxo completo 2026-09-29` e `[HM
 
 **Perfis:** uma conta de cada papel — `usuario`, `pesquisador`, `revisor` e `administrador`.
 **Passos:** sair e entrar separadamente com cada conta; comparar o menu com a matriz em `api_lixocerto/docs/CONTAS_HOMOLOGACAO.md`; tentar abrir pela navegação direta uma área que não consta para aquele perfil. Para o pesquisador, conferir que não existe aba de participação em desafios; para o usuário, confirmar que Pesquisa mostra o formulário, mas não os resultados agregados.
-**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas resultados agregados da avaliação de usabilidade, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria. Confirme também que a migration 033 está aplicada antes de testar quiz, pontos e selos.
+**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas resultados agregados da avaliação de usabilidade, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria. Confirme também as migrations 033 e 034 antes de testar quiz, gamificação e o novo fluxo de check-in/fotos.
 
 ### AUTH-03 — Leitura e participação em desafios
 
@@ -256,21 +256,22 @@ Preencha durante o teste; não inclua senhas, tokens, cookies ou `.env`.
 | GAM-02 — desafios por ciclo |  |  |  |
 | GAM-03 — selos e origem dos pontos |  |  |  |
 | GAM-04 — validação de descarte |  |  |  |
+| GAM-05 — check-in de 5 m e evidências |  |  |  |
 
 Anexe apenas capturas sem credenciais e saídas sanitizadas de `docker compose ps`. Para erro de API, registre horário, caso de teste e mensagem sem copiar cabeçalhos de autorização.
 
 ## 9. Critério de conclusão
 
-A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01/02/03, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029–033 estiverem aplicadas, os seeders seletivos necessários tiverem sido executados e API/frontend permanecerem saudáveis após reinício. Os novos fluxos de recompensa precisam ser validados também pelos casos GAM-01 a GAM-04 ao fim deste roteiro. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
+A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01/02/03, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029–034 estiverem aplicadas, os seeders seletivos necessários tiverem sido executados e API/frontend permanecerem saudáveis após reinício. Os fluxos de recompensa e evidência precisam passar também pelos casos GAM-01 a GAM-05. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
 
 
 ## 10. Melhorias de orientação e operação local
 
-A versão atual inclui as migrations `032_adicionar_dados_atendimento_pontos_coleta.cjs` (horário, telefone e URL informativa opcionais) e `033_engajamento_quizzes_selos_desafios.cjs` (atribuições únicas de quiz, ledger de pontos, selos, descartes revisáveis e desafios por ciclo), além de atualizar os contratos protobuf. Antes do uso, consulte o estado das migrations e aplique somente pendências pelo procedimento PowerShell acima. A API valida links HTTP(S), limites de tamanho e formato do telefone; informações opcionais não confirmadas devem ficar vazias. O status verificado exibe a data registrada pela API.
+A versão atual inclui as migrations `032_adicionar_dados_atendimento_pontos_coleta.cjs` (horário, telefone e URL informativa opcionais), `033_engajamento_quizzes_selos_desafios.cjs` (quiz individual, ledger, selos e desafios periódicos) e `034_checkin_evidencias_descartes.cjs` (check-in e evidências fotográficas). Antes do uso, consulte o estado das migrations e aplique somente pendências pelo procedimento PowerShell acima. A API valida links HTTP(S), limites de tamanho e formato do telefone; informações opcionais não confirmadas devem ficar vazias. O status verificado exibe a data registrada pela API.
 
 O Guia de descarte é consulta a conteúdos publicados; a Central de revisão continua sendo o fluxo separado para editar e aprovar. O seeder `002_preparar_leva_inicial_guia.cjs` só prepara cinco registros como rascunhos, exige `AMBIENTE_EXECUCAO=desenvolvimento` e `LCR_PREPARAR_LEVA_GUIA_INICIAL=true` e nunca publica. A atualização reconhece o lote curado anterior somente pelo marcador/versionamento exatos e recusa registros publicados/editados fora do estado previsto. A aprovação continua individual, autenticada e auditada pela interface.
 
-Para backups e privacidade, consulte `api_lixocerto/docs/OPERACAO_PRIVACIDADE_E_BACKUP.md`. O Compose deste projeto não inclui PostgreSQL; o volume Redis não é backup do banco. O dump/restore é manual, deve ser protegido e restaurado somente em base descartável. A geolocalização exige ação explícita, serve à busca por proximidade e não é guardada como perfil pela aplicação. Não compartilhe `.env`, tokens, dumps ou dados pessoais em anexos/logs.
+Para backups e privacidade, consulte `api_lixocerto/docs/OPERACAO_PRIVACIDADE_E_BACKUP.md`. O Compose deste projeto não inclui PostgreSQL; o volume Redis não é backup do banco. O dump PostgreSQL e o volume Docker `lcr-descartes-evidencias` são artefatos separados e ambos devem ser incluídos no backup do novo fluxo. Fotos e coordenadas seguem retenção de 90 dias após a decisão final; o relato pendente conserva evidências até revisão. A restauração do volume deve ser ensaiada em volume isolado. Não compartilhe `.env`, tokens, dumps, fotos ou dados pessoais em anexos/logs.
 
 ## 11. Gamificação, quiz aleatório e ciclos de desafios
 
@@ -284,7 +285,7 @@ Depois de aplicar a migration 033 e criar as tabelas, execute seletivamente os s
 - O sorteio atua dentro da aplicação/API — não envia e-mail, SMS ou push externo. O usuário vê a questão ao abrir ou manter aberta a tela **Quiz ambiental**.
 - Desafios diários, semanais (semana ISO) e mensais usam o calendário `America/Sao_Paulo`. A participação é iniciada pelo usuário uma vez por desafio/ciclo; após completar, a missão deixa de aparecer para aquele ciclo e pode ser iniciada novamente no ciclo seguinte.
 - Os critérios podem contar respostas corretas de quiz (opcionalmente por tema), descartes validados de uma categoria específica ou quantas categorias distintas foram descartadas. Somente eventos ocorridos durante o ciclo e após a participação contam. Os bônus de conclusão e pontos de quiz/descarte são idempotentes.
-- Um descarte precisa apontar para ponto verificado e categoria aceita. O registro fica pendente; o revisor não pode aprovar o próprio envio e a pontuação (20 pontos) só entra após aprovação. A API limita a 10 registros por 24 horas e bloqueia repetição da mesma categoria no mesmo ponto nesse intervalo.
+- Um descarte precisa ter check-in validado a no máximo 5 m (GPS com precisão declarada até 10 m), ponto verificado, categoria aceita e uma foto própria por categoria. O registro fica pendente; o revisor não pode aprovar o próprio envio e a pontuação (20 pontos por categoria aprovada) só entra após aprovação. A API limita a 10 registros por 24 horas e bloqueia repetição da mesma categoria no mesmo ponto nesse intervalo.
 - Selos automáticos por pontos totais: **Broto consciente** (100), **Separador atento** (250), **Guardião circular** (500), **Agente transformador** (1.500) e **Embaixador LixoCerto** (4.000). Pontos legados continuam no total e podem desbloquear selos; o detalhamento por origem registra as recompensas validadas após a migration 033.
 
 ### GAM-01 — Resposta única e recompensa
@@ -310,3 +311,11 @@ Depois de aplicar a migration 033 e criar as tabelas, execute seletivamente os s
 **Perfis:** usuário comum e revisor.
 **Passos:** enviar descarte em ponto verificado e categoria aceita; tentar enviar a mesma categoria no mesmo ponto dentro de 24 horas; revisar como revisor (inclusive testar autoaprovação em ambiente de teste); aprovar outro registro e inspecionar pontos e desafio.
 **Esperado:** repetição e autoaprovação são recusadas; o envio pendente não concede pontos; a aprovação válida concede 20 pontos uma única vez e atualiza o progresso de desafios relacionado.
+
+
+### GAM-05 — Check-in geográfico e evidências fotográficas
+
+**Perfis:** usuário comum; revisor diferente do participante.
+**Pré-condições:** migration 034 aplicada; ponto marcado como verificado, com coordenadas e categorias aceitas; navegador com permissão de localização; teste em ambiente local/desenvolvimento.
+**Passos:** no cartão do ponto, escolher **Iniciar descarte**; testar uma localização a mais de 5 m ou com precisão reportada acima de 10 m; depois, no local correto, iniciar novo check-in, selecionar uma ou mais categorias aceitas e anexar uma foto distinta para cada categoria; enviar e, como outro revisor, abrir a evidência e aprovar. Testar também um envio sem foto, uma categoria não aceita, um segundo acesso à foto como outra conta comum e a rejeição de um registro válido.
+**Esperado:** o servidor recusa fora do raio/precisão sem criar check-in válido; o check-in aceito expira em 30 minutos; faltas ou incompatibilidade bloqueiam o envio; cada foto fica vinculada apenas à categoria escolhida; submissão resulta em `pendente` e 0 pontos; só outro revisor autorizado acessa a imagem; aprovação concede 20 pontos por categoria uma única vez, rejeição concede 0, e registros legados sem check-in/foto não podem ser aprovados. Fotos e coordenadas não aparecem em logs/auditoria, expiram 90 dias após a decisão, e o expurgo físico roda ao menos a cada 10 minutos.
