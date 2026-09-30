@@ -56,7 +56,7 @@ Confirme com `git log -1 --oneline` que os três clones estão na versão espera
 
 ## 5. Build, migrations e subida seletiva
 
-As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor`, `031_adicionar_permissao_gerenciar_acessos` e `032_adicionar_dados_atendimento_pontos_coleta` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** o seed idempotente `001_inserir_papeis_permissoes.cjs` para acrescentar `gamificacao:participar` às relações-base; ele não apaga dados. **Não rode `db:seed:all`** para atualizar a matriz. A migration 031 alterada também permite instalação nova antes dos seeds; a 032 adiciona somente campos opcionais de atendimento. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
+As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor`, `031_adicionar_permissao_gerenciar_acessos`, `032_adicionar_dados_atendimento_pontos_coleta` e `033_engajamento_quizzes_selos_desafios` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** os seeders idempotentes indicados abaixo; eles não apagam dados. **Não rode `db:seed:all`**. A migration 033 adiciona o agendamento de quizzes individuais, ledger de pontos, selos, registro validável de descarte e ciclos/critério de desafios. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
 
 ```powershell
 Set-Location G:\LixoCerto\infra_lixocerto
@@ -76,7 +76,7 @@ docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
-# Repetir status; 029, 030 e 031 devem constar como aplicadas
+# Repetir status; migrations 029 a 033 devem constar como aplicadas
 docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
   node_modules/sequelize-cli/lib/sequelize db:migrate:status `
   --config configuracao_sequelize.cjs `
@@ -86,6 +86,20 @@ docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node
 docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
   node_modules/sequelize-cli/lib/sequelize db:seed `
     --seed 001_inserir_papeis_permissoes.cjs `
+    --config configuracao_sequelize.cjs `
+    --seeders-path banco/dados_iniciais
+
+# Instalar a leva inicial de quizzes publicados (seis temas); idempotente
+docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
+  node_modules/sequelize-cli/lib/sequelize db:seed `
+    --seed 004_inserir_quiz_ambiental_inicial.cjs `
+    --config configuracao_sequelize.cjs `
+    --seeders-path banco/dados_iniciais
+
+# Instalar desafios diário, semanal e mensal; idempotente
+docker compose -f compose.yml --profile app run --rm --no-deps --entrypoint node api `
+  node_modules/sequelize-cli/lib/sequelize db:seed `
+    --seed 005_inserir_desafios_recorrentes.cjs `
     --config configuracao_sequelize.cjs `
     --seeders-path banco/dados_iniciais
 
@@ -171,7 +185,7 @@ Use títulos inequívocos como `[HML] Questão fluxo completo 2026-09-29` e `[HM
 
 **Perfis:** uma conta de cada papel — `usuario`, `pesquisador`, `revisor` e `administrador`.
 **Passos:** sair e entrar separadamente com cada conta; comparar o menu com a matriz em `api_lixocerto/docs/CONTAS_HOMOLOGACAO.md`; tentar abrir pela navegação direta uma área que não consta para aquele perfil. Para o pesquisador, conferir que não existe aba de participação em desafios; para o usuário, confirmar que Pesquisa mostra o formulário, mas não os resultados agregados.
-**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas resultados agregados da avaliação de usabilidade, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria.
+**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas resultados agregados da avaliação de usabilidade, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria. Confirme também que a migration 033 está aplicada antes de testar quiz, pontos e selos.
 
 ### AUTH-03 — Leitura e participação em desafios
 
@@ -238,18 +252,61 @@ Preencha durante o teste; não inclua senhas, tokens, cookies ou `.env`.
 | ADM-04 — revogação de sessões |  |  |  |
 | ADM-05 — resumo/auditoria |  |  |  |
 | OPS-01 — persistência |  |  |  |
+| GAM-01 — quiz único e recompensa |  |  |  |
+| GAM-02 — desafios por ciclo |  |  |  |
+| GAM-03 — selos e origem dos pontos |  |  |  |
+| GAM-04 — validação de descarte |  |  |  |
 
 Anexe apenas capturas sem credenciais e saídas sanitizadas de `docker compose ps`. Para erro de API, registre horário, caso de teste e mensagem sem copiar cabeçalhos de autorização.
 
 ## 9. Critério de conclusão
 
-A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01/02/03, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029/030/031 estiverem aplicadas, o seed de permissões tiver sido reaplicado para frente e API/frontend permanecerem saudáveis após reinício. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
+A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01/02/03, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029–033 estiverem aplicadas, os seeders seletivos necessários tiverem sido executados e API/frontend permanecerem saudáveis após reinício. Os novos fluxos de recompensa precisam ser validados também pelos casos GAM-01 a GAM-04 ao fim deste roteiro. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
 
 
 ## 10. Melhorias de orientação e operação local
 
-A versão atual acrescenta a migration aditiva `032_adicionar_dados_atendimento_pontos_coleta.cjs` (horário, telefone e URL informativa opcionais) e atualiza o contrato protobuf. Antes do uso, consulte o estado das migrations e aplique somente pendências pelo procedimento PowerShell em `api_lixocerto/docs/curadoria-lote-inicial-guia.md`. A API valida links HTTP(S), limites de tamanho e formato do telefone; informações opcionais não confirmadas devem ficar vazias. O status verificado exibe a data registrada pela API.
+A versão atual inclui as migrations `032_adicionar_dados_atendimento_pontos_coleta.cjs` (horário, telefone e URL informativa opcionais) e `033_engajamento_quizzes_selos_desafios.cjs` (atribuições únicas de quiz, ledger de pontos, selos, descartes revisáveis e desafios por ciclo), além de atualizar os contratos protobuf. Antes do uso, consulte o estado das migrations e aplique somente pendências pelo procedimento PowerShell acima. A API valida links HTTP(S), limites de tamanho e formato do telefone; informações opcionais não confirmadas devem ficar vazias. O status verificado exibe a data registrada pela API.
 
 O Guia de descarte é consulta a conteúdos publicados; a Central de revisão continua sendo o fluxo separado para editar e aprovar. O seeder `002_preparar_leva_inicial_guia.cjs` só prepara cinco registros como rascunhos, exige `AMBIENTE_EXECUCAO=desenvolvimento` e `LCR_PREPARAR_LEVA_GUIA_INICIAL=true` e nunca publica. A atualização reconhece o lote curado anterior somente pelo marcador/versionamento exatos e recusa registros publicados/editados fora do estado previsto. A aprovação continua individual, autenticada e auditada pela interface.
 
 Para backups e privacidade, consulte `api_lixocerto/docs/OPERACAO_PRIVACIDADE_E_BACKUP.md`. O Compose deste projeto não inclui PostgreSQL; o volume Redis não é backup do banco. O dump/restore é manual, deve ser protegido e restaurado somente em base descartável. A geolocalização exige ação explícita, serve à busca por proximidade e não é guardada como perfil pela aplicação. Não compartilhe `.env`, tokens, dumps ou dados pessoais em anexos/logs.
+
+## 11. Gamificação, quiz aleatório e ciclos de desafios
+
+### Carga inicial e operação
+
+Depois de aplicar a migration 033 e criar as tabelas, execute seletivamente os seeders `004_inserir_quiz_ambiental_inicial.cjs` (seis questões em temas variados, explicações com referências) e `005_inserir_desafios_recorrentes.cjs` (missões diária, semanal e mensal). Os comandos PowerShell estão na seção 5; ambos são idempotentes. **Não execute `db:seed:all`**. A proveniência editorial das questões está em `api_lixocerto/docs/REFERENCIAS_QUIZ_AMBIENTAL.md`.
+
+### Regras funcionais esperadas
+
+- Cada participante recebe no máximo uma questão ativa. A primeira e as seguintes são agendadas em intervalos aleatórios de 24–72 horas; a questão expira em 48 horas, e o tema tenta alternar em relação ao quiz anterior. A pontuação por acerto é sorteada entre 10 e o limite configurado (máximo 50). O gabarito fica oculto; após qualquer resposta registrada a questão sai da lista e a API bloqueia nova tentativa. Se a página do quiz estiver aberta, ela atualiza as atribuições a cada minuto.
+- O sorteio atua dentro da aplicação/API — não envia e-mail, SMS ou push externo. O usuário vê a questão ao abrir ou manter aberta a tela **Quiz ambiental**.
+- Desafios diários, semanais (semana ISO) e mensais usam o calendário `America/Sao_Paulo`. A participação é iniciada pelo usuário uma vez por desafio/ciclo; após completar, a missão deixa de aparecer para aquele ciclo e pode ser iniciada novamente no ciclo seguinte.
+- Os critérios podem contar respostas corretas de quiz (opcionalmente por tema), descartes validados de uma categoria específica ou quantas categorias distintas foram descartadas. Somente eventos ocorridos durante o ciclo e após a participação contam. Os bônus de conclusão e pontos de quiz/descarte são idempotentes.
+- Um descarte precisa apontar para ponto verificado e categoria aceita. O registro fica pendente; o revisor não pode aprovar o próprio envio e a pontuação (20 pontos) só entra após aprovação. A API limita a 10 registros por 24 horas e bloqueia repetição da mesma categoria no mesmo ponto nesse intervalo.
+- Selos automáticos por pontos totais: **Broto consciente** (100), **Separador atento** (250), **Guardião circular** (500), **Agente transformador** (1.500) e **Embaixador LixoCerto** (4.000). Pontos legados continuam no total e podem desbloquear selos; o detalhamento por origem registra as recompensas validadas após a migration 033.
+
+### GAM-01 — Resposta única e recompensa
+
+**Perfil:** usuário comum.
+**Passos:** abrir Quiz ambiental, conferir que há somente uma questão; responder corretamente e verificar os pontos sorteados e a explicação; tentar repetir a mesma questão via sessão/cliente autorizado de teste; quando houver outra atribuição futura, verificar se a nova questão não foi apresentada antes.
+**Esperado:** uma única tentativa por questão para sempre; pontos uma única vez e na mesma transação da resposta; questão removida imediatamente após resposta; novos quizzes têm horário, tema e prêmio aleatórios, sem mais de uma questão ativa por usuário.
+
+### GAM-02 — Desafio diário, semanal e mensal
+
+**Perfil:** usuário comum.
+**Passos:** participar de cada desafio inicial; obter um quiz correto e/ou enviar descartes em pontos verificados de categorias aceitas; aguardar revisão para descarte; acompanhar progresso e conclusão.
+**Esperado:** ciclos e metas aparecem claramente; progresso de quiz conta após acerto e de descarte somente após aprovação; categorias distintas não contam duas vezes a mesma categoria; conclusão credita o bônus uma única vez e a missão não pode ser repetida no mesmo ciclo.
+
+### GAM-03 — Selos e origem dos pontos
+
+**Perfil:** usuário comum.
+**Passos:** consultar o painel de gamificação antes e depois de uma recompensa; validar selo bloqueado/conquistado e o resumo por descarte, quiz e desafio.
+**Esperado:** selo é concedido na primeira leitura/recompensa quando o total alcança o limiar, sem duplicação; o painel distingue o histórico legado do ledger detalhado iniciado na migration 033.
+
+### GAM-04 — Validação do descarte
+
+**Perfis:** usuário comum e revisor.
+**Passos:** enviar descarte em ponto verificado e categoria aceita; tentar enviar a mesma categoria no mesmo ponto dentro de 24 horas; revisar como revisor (inclusive testar autoaprovação em ambiente de teste); aprovar outro registro e inspecionar pontos e desafio.
+**Esperado:** repetição e autoaprovação são recusadas; o envio pendente não concede pontos; a aprovação válida concede 20 pontos uma única vez e atualiza o progresso de desafios relacionado.
