@@ -52,11 +52,11 @@ git -C .\api_lixocerto log -1 --oneline
 git -C .\frontend_lixocerto log -1 --oneline
 ```
 
-Confirme que a API mostra o commit `0df2c37` e o frontend `4a98ea4`; a infraestrutura também deve estar atualizada na `main`. Se o `pull --ff-only` parar por divergência, não force; interrompa e investigue a branch local.
+Confirme com `git log -1 --oneline` que os três clones estão na versão esperada da `main` e sem alterações locais pendentes. Não fixe SHAs antigos neste roteiro: registre os SHAs efetivamente obtidos após o pull. Se o `pull --ff-only` parar por divergência, não force; interrompa e investigue a branch local.
 
 ## 5. Build, migrations e subida seletiva
 
-As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor` e `031_adicionar_permissao_gerenciar_acessos` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** o seed idempotente `001_inserir_papeis_permissoes.cjs` para acrescentar `gamificacao:participar` às relações-base; ele não apaga dados. **Não rode `db:seed:all`** para atualizar a matriz. A migration 031 alterada também permite instalação nova antes dos seeds. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
+As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor`, `031_adicionar_permissao_gerenciar_acessos` e `032_adicionar_dados_atendimento_pontos_coleta` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** o seed idempotente `001_inserir_papeis_permissoes.cjs` para acrescentar `gamificacao:participar` às relações-base; ele não apaga dados. **Não rode `db:seed:all`** para atualizar a matriz. A migration 031 alterada também permite instalação nova antes dos seeds; a 032 adiciona somente campos opcionais de atendimento. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
 
 ```powershell
 Set-Location G:\LixoCerto\infra_lixocerto
@@ -104,8 +104,8 @@ curl.exe -I http://localhost:3000/
 |---|---|
 | `administrador` | Acesso completo, incluindo gestão de acessos, papéis, permissões e auditoria; matriz protegida no backend. |
 | `revisor` | Criar/aprovar materiais e pontos; gerir e responder quiz; gerir desafios sem participar; sem administração de acessos ou auditoria. |
-| `usuario` | Ler guia/pontos, responder quiz publicado, ler gamificação, participar de desafios e enviar SUS; sem controles de gestão nem resultados agregados. |
-| `pesquisador` | Ler guia/pontos e seu progresso; consultar somente resultados SUS agregados; sem quiz, participação em desafios, gestão ou auditoria. |
+| `usuario` | Ler guia/pontos, responder quiz publicado, ler gamificação, participar de desafios e enviar avaliação de usabilidade; sem controles de gestão nem resultados agregados. |
+| `pesquisador` | Ler guia/pontos e seu progresso; consultar somente resultados agregados da avaliação de usabilidade; sem quiz, participação em desafios, gestão ou auditoria. |
 
 Uma área sem permissão não deve aparecer no menu e a navegação direta deve voltar à Visão geral. Ocultar um botão não basta para comprovar segurança: endpoints também precisam rejeitar a chamada na API. Não compartilhe JWTs ou capturas que os exponham. Após atualizar o seed, saia e entre novamente para renovar as permissões da sessão.
 
@@ -165,13 +165,13 @@ Use títulos inequívocos como `[HML] Questão fluxo completo 2026-09-29` e `[HM
 
 **Perfis:** administrador/revisor e usuário comum.
 **Passos:** entrar em cada perfil e conferir abas/controles. Para validar proteção de backend, tentar chamar um RPC de gestão com a sessão de usuário comum em um cliente de teste, sem alterar conteúdo.
-**Esperado:** usuário comum não vê **Gerenciar** e a chamada direta recebe erro de autorização; revisor/admin pode listar e operar a gestão de desafios/questionários. Confirmar que as migrations 029, 030 e 031 estão aplicadas.
+**Esperado:** usuário comum não vê **Gerenciar** e a chamada direta recebe erro de autorização; revisor/admin pode listar e operar a gestão de desafios/questionários. Confirmar que as migrations 029, 030, 031 e 032 estão aplicadas.
 
 ### AUTH-02 — Áreas visíveis para cada perfil-base
 
 **Perfis:** uma conta de cada papel — `usuario`, `pesquisador`, `revisor` e `administrador`.
 **Passos:** sair e entrar separadamente com cada conta; comparar o menu com a matriz em `api_lixocerto/docs/CONTAS_HOMOLOGACAO.md`; tentar abrir pela navegação direta uma área que não consta para aquele perfil. Para o pesquisador, conferir que não existe aba de participação em desafios; para o usuário, confirmar que Pesquisa mostra o formulário, mas não os resultados agregados.
-**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas agregados SUS, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria.
+**Esperado:** aparecem somente áreas autorizadas; navegação direta sem permissão retorna à Visão geral; a API não carrega os dados da área negada. Pesquisador vê apenas resultados agregados da avaliação de usabilidade, revisor vê gestão de desafios/questionários, e apenas o administrador vê governança/auditoria.
 
 ### AUTH-03 — Leitura e participação em desafios
 
@@ -244,3 +244,12 @@ Anexe apenas capturas sem credenciais e saídas sanitizadas de `docker compose p
 ## 9. Critério de conclusão
 
 A fase fica **homologada** quando os casos críticos (PRE-01, QST-01/03/04, DES-01/02/03, AUTH-01/02/03, ADM-01/02/03/04/05 e OPS-01) passarem, migrations 029/030/031 estiverem aplicadas, o seed de permissões tiver sido reaplicado para frente e API/frontend permanecerem saudáveis após reinício. Falhas bloqueantes devem ser corrigidas antes de iniciar um piloto com participantes reais.
+
+
+## 10. Melhorias de orientação e operação local
+
+A versão atual acrescenta a migration aditiva `032_adicionar_dados_atendimento_pontos_coleta.cjs` (horário, telefone e URL informativa opcionais) e atualiza o contrato protobuf. Antes do uso, consulte o estado das migrations e aplique somente pendências pelo procedimento PowerShell em `api_lixocerto/docs/curadoria-lote-inicial-guia.md`. A API valida links HTTP(S), limites de tamanho e formato do telefone; informações opcionais não confirmadas devem ficar vazias. O status verificado exibe a data registrada pela API.
+
+O Guia de descarte é consulta a conteúdos publicados; a Central de revisão continua sendo o fluxo separado para editar e aprovar. O seeder `002_preparar_leva_inicial_guia.cjs` só prepara cinco registros como rascunhos, exige `AMBIENTE_EXECUCAO=desenvolvimento` e `LCR_PREPARAR_LEVA_GUIA_INICIAL=true` e nunca publica. A atualização reconhece o lote curado anterior somente pelo marcador/versionamento exatos e recusa registros publicados/editados fora do estado previsto. A aprovação continua individual, autenticada e auditada pela interface.
+
+Para backups e privacidade, consulte `api_lixocerto/docs/OPERACAO_PRIVACIDADE_E_BACKUP.md`. O Compose deste projeto não inclui PostgreSQL; o volume Redis não é backup do banco. O dump/restore é manual, deve ser protegido e restaurado somente em base descartável. A geolocalização exige ação explícita, serve à busca por proximidade e não é guardada como perfil pela aplicação. Não compartilhe `.env`, tokens, dumps ou dados pessoais em anexos/logs.
