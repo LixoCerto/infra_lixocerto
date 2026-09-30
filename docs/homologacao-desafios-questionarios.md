@@ -52,11 +52,11 @@ git -C .\api_lixocerto log -1 --oneline
 git -C .\frontend_lixocerto log -1 --oneline
 ```
 
-Confirme que a API mostra o commit `fix: alinhar TLS das migrations à API` e o frontend `8f1e91b`. Se o `pull --ff-only` parar por divergência, não force; interrompa e investigue a branch local.
+Confirme que a API mostra o commit `0df2c37` e o frontend `4a98ea4`; a infraestrutura também deve estar atualizada na `main`. Se o `pull --ff-only` parar por divergência, não force; interrompa e investigue a branch local.
 
 ## 5. Build, migrations e subida seletiva
 
-As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor` e `031_adicionar_permissao_gerenciar_acessos` habilitam as permissões desta fase. A 031 cria a permissão exclusiva de gestão de acessos e a atribui ao papel administrador ativo. Para banco existente, **não rode `db:seed:all` para esta atualização**; aplique apenas migrations pendentes pelo Sequelize. O seed 001 atualizado é destinado à inicialização de banco novo. A configuração de `db:migrate` respeita `BANCO_DADOS_SSL` tal como a conexão da API, mantendo `rejectUnauthorized: true` quando o TLS estiver habilitado.
+As migrations `029_adicionar_permissao_administrar_desafios`, `030_conceder_resposta_questionario_revisor` e `031_adicionar_permissao_gerenciar_acessos` devem estar aplicadas. Em bancos existentes, confira o status e aplique somente as pendentes. Depois, execute **apenas** o seed idempotente `001_inserir_papeis_permissoes.cjs` para acrescentar `gamificacao:participar` às relações-base; ele não apaga dados. **Não rode `db:seed:all`** para atualizar a matriz. A migration 031 alterada também permite instalação nova antes dos seeds. Os comandos abaixo fixam o entrypoint e chamam diretamente o Sequelize CLI. A configuração respeita `BANCO_DADOS_SSL` tal como a API e mantém `rejectUnauthorized: true` quando TLS está habilitado.
 
 ```powershell
 Set-Location G:\LixoCerto\infra_lixocerto
@@ -66,21 +66,28 @@ docker compose -f compose.yml --profile app build --no-cache api frontend
 
 # Verificar o estado das migrations no banco configurado no .env da API
 docker compose -f compose.yml --profile app run --rm --no-deps api `
-  node_modules/.bin/sequelize-cli db:migrate:status `
+  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:migrate:status `
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
 # Aplicar apenas migrations pendentes
 docker compose -f compose.yml --profile app run --rm --no-deps api `
-  node_modules/.bin/sequelize-cli db:migrate `
+  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:migrate `
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
 
 # Repetir status; 029, 030 e 031 devem constar como aplicadas
 docker compose -f compose.yml --profile app run --rm --no-deps api `
-  node_modules/.bin/sequelize-cli db:migrate:status `
+  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:migrate:status `
   --config configuracao_sequelize.cjs `
   --migrations-path banco/migracoes
+
+# Atualizar somente a matriz RBAC base; não executar db:seed:all
+docker compose -f compose.yml --profile app run --rm --no-deps api `
+  --entrypoint node api node_modules/sequelize-cli/lib/sequelize db:seed `
+    --seed 001_inserir_papeis_permissoes.cjs `
+    --config configuracao_sequelize.cjs `
+    --seeders-path banco/dados_iniciais
 
 # Recriar apenas os serviços atualizados; dependências existentes permanecem ativas
 docker compose -f compose.yml --profile app up -d --no-deps --force-recreate api frontend
@@ -95,11 +102,12 @@ curl.exe -I http://localhost:3000/
 
 | Perfil | O que deve conseguir fazer |
 |---|---|
-| Administrador | Gerenciar e responder questões; gerenciar e participar de desafios. |
-| Revisor | Gerenciar e responder questões; gerenciar e participar de desafios, após as migrations 029/030. |
-| Usuário comum | Responder questões publicadas e participar de desafios publicados; sem controles de gestão. |
+| `administrador` | Acesso completo, incluindo gestão de acessos, papéis, permissões e auditoria; matriz protegida no backend. |
+| `revisor` | Criar/aprovar materiais e pontos; gerir e responder quiz; gerir desafios sem participar; sem administração de acessos ou auditoria. |
+| `usuario` | Ler guia/pontos, responder quiz publicado, ler gamificação, participar de desafios e enviar SUS; sem controles de gestão nem resultados agregados. |
+| `pesquisador` | Ler guia/pontos e seu progresso; consultar somente resultados SUS agregados; sem quiz, participação em desafios, gestão ou auditoria. |
 
-Ocultar um botão não basta para comprovar segurança: endpoints administrativos devem continuar protegidos pela API. Não compartilhe JWTs ou capturas que os exponham.
+Uma área sem permissão não deve aparecer no menu e a navegação direta deve voltar à Visão geral. Ocultar um botão não basta para comprovar segurança: endpoints também precisam rejeitar a chamada na API. Não compartilhe JWTs ou capturas que os exponham. Após atualizar o seed, saia e entre novamente para renovar as permissões da sessão.
 
 ## 7. Casos de aceite funcionais
 
