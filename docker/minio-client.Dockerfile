@@ -30,5 +30,6 @@ RUN apt-get update \
     && groupadd --system --gid 10001 mc \
     && useradd --system --uid 10001 --gid mc --home-dir /tmp --shell /usr/sbin/nologin mc
 COPY --from=build --chown=10001:10001 /out/mc /usr/local/bin/mc
+COPY --chown=10001:10001 minio-bootstrap.sh /usr/local/bin/minio-bootstrap.sh
 USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/mc"]

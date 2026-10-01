@@ -78,11 +78,20 @@ try {
 docker compose -f compose.yml --profile app build --pull --no-cache minio minio-bootstrap
 
 # Inicia MinIO, prepara permissões do volume novo e executa o bootstrap do bucket/chave.
+docker compose -f compose.yml --profile app rm -sf minio-bootstrap
 docker compose -f compose.yml --profile app up -d minio minio-bootstrap
 docker compose -f compose.yml --profile app ps minio minio-data-init minio-bootstrap
 ```
 
-O Compose usa imagens locais `lixocerto-minio-community` e `lixocerto-minio-client`; não deve tentar baixar `minio/minio` ou `minio/mc`. O bootstrap aguarda o serviço, cria o bucket privado e provisiona a identidade limitada da API. Se a compilação ou o bootstrap terminar com erro, não inicie a API; confira os logs sem copiar variáveis de ambiente ou credenciais.
+O Compose usa imagens locais `lixocerto-minio-community` e `lixocerto-minio-client`; não deve tentar baixar `minio/minio` ou `minio/mc`. O bootstrap está em `docker/minio-bootstrap.sh`; aguarda o serviço, cria o bucket privado, provisiona a identidade limitada da API e faz smoke test real de gravação, leitura e exclusão de um objeto temporário. Em execuções posteriores, remova o container one-shot anterior antes de pedir novo bootstrap:
+
+```powershell
+docker compose -f compose.yml --profile app rm -sf minio-bootstrap
+docker compose -f compose.yml --profile app up -d minio-bootstrap
+docker compose -f compose.yml --profile app logs --no-color minio-bootstrap
+```
+
+Se a compilação ou o bootstrap terminar com erro, não inicie a API; confira os logs sem copiar variáveis de ambiente ou credenciais.
 
 ### 4. Validar referências e copiar, primeiro com dry-run
 

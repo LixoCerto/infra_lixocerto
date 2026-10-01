@@ -10,6 +10,7 @@ infra_lixocerto/
 ├── docker/
 │   ├── api.Dockerfile
 │   ├── frontend.Dockerfile
+│   ├── minio-bootstrap.sh
 │   └── envoy.yaml
 ├── scripts/
 ├── tools/
@@ -22,6 +23,7 @@ Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixoc
 
 - `cache-init`: inicializa o diretório AOF e ajusta o volume para o UID/GID não-root do Redis (999:1000);
 - `cache`: Redis local protegido por senha, executado como UID/GID 999:1000, com AOF, volume persistente e healthcheck;
+- `minio` e `minio-bootstrap`: armazenamento privado S3 local; o bootstrap provisiona e testa bucket, identidade e permissões antes de permitir a inicialização da API;
 - `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo; o healthcheck confirma que a porta gRPC está aceitando conexões;
 - `gateway`: Envoy converte gRPC-Web do navegador para gRPC na API;
 - `frontend`: bundle React/Vite servido pelo Nginx, sem Node em runtime e sem banco próprio.
@@ -38,7 +40,18 @@ G:\LixoCerto\api_lixocerto
 G:\LixoCerto\frontend_lixocerto
 ```
 
-A API deve possuir `.env` privado com PostgreSQL, Redis, JWT e e-mail. O frontend deve possuir seu próprio `.env` com `VITE_API_BASE_URL`. A infraestrutura não possui `.env` próprio: o Compose referencia diretamente os dois arquivos dos projetos irmãos.
+A API deve possuir `.env` privado com PostgreSQL, Redis, JWT e e-mail. O frontend deve possuir seu próprio `.env` com `VITE_API_BASE_URL`. A infraestrutura não possui `.env` próprio: o Compose referencia diretamente os dois arquivos dos projetos irmãos. A conexão e as credenciais do PostgreSQL não podem ser geradas pelo projeto; configure-as a partir dos exemplos, sem versionar os arquivos reais.
+
+Em um clone novo, crie os arquivos privados somente se ainda não existirem e preencha os valores de desenvolvimento:
+
+```powershell
+if (-not (Test-Path ..\api_lixocerto\.env)) { Copy-Item ..\api_lixocerto\.env.exemplo ..\api_lixocerto\.env }
+if (-not (Test-Path ..\frontend_lixocerto\.env)) { Copy-Item ..\frontend_lixocerto\.env.exemplo ..\frontend_lixocerto\.env }
+notepad ..\api_lixocerto\.env
+notepad ..\frontend_lixocerto\.env
+```
+
+Não compartilhe esses arquivos nem os adicione ao Git. O banco PostgreSQL deve estar disponível na rede do Docker antes de iniciar a aplicação.
 
 ## Configuração e execução
 
@@ -49,13 +62,9 @@ No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
 .\scripts\iniciar.ps1 -Aplicacao
 ```
 
-Ou diretamente, sem `--env-file`:
+Na primeira execução, `iniciar.ps1 -Aplicacao` gera os arquivos locais MinIO (sem sobrescrever configurações existentes), constrói as imagens, inicia MinIO, força uma nova execução do bootstrap e verifica bucket privado e operações S3 da API **antes** de iniciar API/gateway/frontend. Se o bootstrap falhar, a API não é iniciada. O PostgreSQL continua externo e as migrations/seeds permanecem uma etapa explícita, documentada abaixo; não execute esse fluxo apontando para uma base de produção.
 
-```powershell
-docker compose -f compose.yml --profile app up -d --build
-```
-
-O `compose.yml` carrega automaticamente `..\api_lixocerto\.env` para a API e o Redis, e o Dockerfile do frontend carrega `..\frontend_lixocerto\.env` durante o build do Vite.
+O `compose.yml` carrega automaticamente `..\api_lixocerto\.env` para a API e o Redis, e o Dockerfile do frontend carrega `..\frontend_lixocerto\.env` durante o build do Vite. Para o primeiro start, use o inicializador em vez de iniciar serviços individualmente: ele confirma o resultado do bootstrap antes de subir a API.
 
 O gateway só inicia depois que a API passa no healthcheck gRPC. Durante uma inicialização fria, consulte `docker compose -f compose.yml ps` e aguarde `healthy` para a API antes de investigar falhas de conexão; o healthcheck permite até três minutos para a primeira inicialização e não reinicia nem encerra a API.
 
