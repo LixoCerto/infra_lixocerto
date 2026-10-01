@@ -25,7 +25,7 @@ RUN mkdir -p /out \
 FROM debian:bookworm-slim AS runtime
 ENV HOME=/tmp
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates coreutils \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 mc \
     && useradd --system --uid 10001 --gid mc --home-dir /tmp --shell /usr/sbin/nologin mc

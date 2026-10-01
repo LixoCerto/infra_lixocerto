@@ -121,23 +121,43 @@ services:
     entrypoint: ["/bin/sh", "-ec"]
     command: |
       tentativa=0
-      until mc alias set lcr http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null 2>&1 && mc ready lcr >/dev/null 2>&1; do
+      until timeout 5s mc alias set lcr http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null 2>&1 && timeout 5s mc ready lcr >/dev/null 2>&1; do
         tentativa=$$((tentativa + 1))
-        if [ "$$tentativa" -ge 60 ]; then
-          echo "MinIO não ficou pronto dentro do prazo." >&2
+        echo "Aguardando MinIO responder (tentativa $$tentativa/10)." >&2
+        if [ "$$tentativa" -ge 10 ]; then
+          echo "Falha no bootstrap: MinIO não respondeu ao alias/health check dentro do prazo." >&2
           exit 1
         fi
         sleep 2
       done
-      mc mb --ignore-existing "lcr/$${LCR_EVIDENCIAS_S3_BUCKET}"
-      if ! mc admin user info lcr "$${LCR_EVIDENCIAS_S3_ACCESS_KEY}" >/dev/null 2>&1; then
-        mc admin user add lcr "$${LCR_EVIDENCIAS_S3_ACCESS_KEY}" "$${LCR_EVIDENCIAS_S3_SECRET_KEY}"
+      echo "MinIO respondeu; preparando bucket privado." >&2
+      if ! timeout 10s mc mb --ignore-existing "lcr/$${LCR_EVIDENCIAS_S3_BUCKET}" >/dev/null 2>&1; then
+        echo "Falha no bootstrap: não foi possível criar/verificar o bucket." >&2
+        exit 1
       fi
-      if ! mc admin policy info lcr lcr-evidencias-app >/dev/null 2>&1; then
-        mc admin policy create lcr lcr-evidencias-app /policy.json
+      if ! timeout 10s mc admin user info lcr "$${LCR_EVIDENCIAS_S3_ACCESS_KEY}" >/dev/null 2>&1; then
+        echo "Criando identidade de serviço para a API." >&2
+        if ! timeout 10s mc admin user add lcr "$${LCR_EVIDENCIAS_S3_ACCESS_KEY}" "$${LCR_EVIDENCIAS_S3_SECRET_KEY}" >/dev/null 2>&1; then
+          echo "Falha no bootstrap: não foi possível provisionar a identidade de serviço." >&2
+          exit 1
+        fi
       fi
-      mc admin policy attach lcr lcr-evidencias-app --user "$${LCR_EVIDENCIAS_S3_ACCESS_KEY}"
-      mc anonymous set none "lcr/$${LCR_EVIDENCIAS_S3_BUCKET}"
+      if ! timeout 10s mc admin policy info lcr lcr-evidencias-app >/dev/null 2>&1; then
+        echo "Criando política restrita do bucket." >&2
+        if ! timeout 10s mc admin policy create lcr lcr-evidencias-app /policy.json >/dev/null 2>&1; then
+          echo "Falha no bootstrap: não foi possível criar a política de bucket." >&2
+          exit 1
+        fi
+      fi
+      if ! timeout 10s mc admin policy attach lcr lcr-evidencias-app --user "$${LCR_EVIDENCIAS_S3_ACCESS_KEY}" >/dev/null 2>&1; then
+        echo "Falha no bootstrap: não foi possível associar a política à identidade de serviço." >&2
+        exit 1
+      fi
+      if ! timeout 10s mc anonymous set none "lcr/$${LCR_EVIDENCIAS_S3_BUCKET}" >/dev/null 2>&1; then
+        echo "Falha no bootstrap: não foi possível confirmar acesso privado ao bucket." >&2
+        exit 1
+      fi
+      echo "Bootstrap MinIO concluído." >&2
     depends_on:
       minio:
         condition: service_started
