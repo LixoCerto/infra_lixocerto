@@ -58,8 +58,21 @@ if ($Aplicacao) {
     }
     Write-Host 'Bootstrap MinIO validado.' -ForegroundColor Green
 
-    docker compose @compose up -d cache api gateway frontend
-    if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar os serviços da aplicação.' }
+    # Inicia e valida dependências em sequência. O bootstrap já foi validado acima;
+    # --no-deps evita o Compose voltar a aguardar indefinidamente pelo serviço one-shot.
+    docker compose @compose up -d cache
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar o Redis.' }
+    Wait-ContainerHealthy 'lcr-cache' 120
+
+    docker compose @compose up -d --no-deps api
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar a API.' }
+    Wait-ContainerHealthy 'lcr-api' 240
+
+    docker compose @compose up -d --no-deps gateway
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar o gateway.' }
+
+    docker compose @compose up -d --no-deps frontend
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar o frontend.' }
 } else {
     docker compose @compose up -d cache
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar a infraestrutura Docker.' }
