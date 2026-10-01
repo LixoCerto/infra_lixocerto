@@ -32,7 +32,8 @@ if ($Aplicacao) {
 
     docker compose @compose rm -sf minio-bootstrap
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao remover o container one-shot anterior do bootstrap.' }
-    docker compose @compose up -d minio-bootstrap
+    # O MinIO já foi iniciado e validado acima; não reavalie sua dependência transitiva.
+    docker compose @compose up -d --no-deps minio-bootstrap
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao executar o bootstrap do MinIO.' }
 
     function Get-ContainerState([string]$Container) { return ((docker inspect --format '{{.State.Status}}' $Container 2>$null | Out-String).Trim()) }
