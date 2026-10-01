@@ -22,7 +22,7 @@ static_resources:
                           - prefix: "http://localhost:3000"
                           - prefix: "http://127.0.0.1:3000"
                         allow_methods: "POST, OPTIONS"
-                        allow_headers: "keep-alive, user-agent, cache-control, content-type, x-grpc-web, grpc-timeout, authorization, x-user-agent"
+                        allow_headers: "keep-alive, user-agent, cache-control, content-type, x-grpc-web, grpc-timeout, authorization, x-user-agent, x-id-sessao"
                         expose_headers: "grpc-status, grpc-message, grpc-encoding"
                         max_age: "86400"
                       routes:
