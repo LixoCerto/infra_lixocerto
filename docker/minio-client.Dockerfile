@@ -31,5 +31,10 @@ RUN apt-get update \
     && useradd --system --uid 10001 --gid mc --home-dir /tmp --shell /usr/sbin/nologin mc
 COPY --from=build --chown=10001:10001 /out/mc /usr/local/bin/mc
 COPY --chown=10001:10001 minio-bootstrap.sh /usr/local/bin/minio-bootstrap.sh
+# Windows Git checkouts can convert LF to CRLF. Normalize the script in-image
+# before /bin/sh parses it so the container entrypoint is portable.
+RUN tr -d '\r' < /usr/local/bin/minio-bootstrap.sh > /tmp/minio-bootstrap.sh \
+    && install -o 10001 -g 10001 -m 0555 /tmp/minio-bootstrap.sh /usr/local/bin/minio-bootstrap.sh \
+    && rm /tmp/minio-bootstrap.sh
 USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/mc"]
