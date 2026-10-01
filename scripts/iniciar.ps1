@@ -21,9 +21,13 @@ if ($Aplicacao) {
     docker compose @compose build
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao construir as imagens Docker.' }
 
-    # Inicializa storage primeiro; nenhum processo da aplicação é iniciado antes do
-    # bootstrap confirmar bucket privado, identidade e operações S3 da API.
-    docker compose @compose up -d minio
+    # Prepara o volume de forma síncrona: este serviço só cria /data e ajusta
+    # propriedade. Não delega a espera do one-shot ao grafo de dependências do Compose.
+    docker compose @compose run --rm --no-deps minio-data-init
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao preparar o volume MinIO.' }
+
+    # O init terminou com sucesso; inicia o MinIO sem reexecutar a dependência one-shot.
+    docker compose @compose up -d --no-deps minio
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao iniciar o MinIO.' }
 
     docker compose @compose rm -sf minio-bootstrap
