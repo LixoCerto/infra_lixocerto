@@ -21,6 +21,7 @@ static_resources:
                         allow_origin_string_match:
                           - prefix: "http://localhost:3000"
                           - prefix: "http://127.0.0.1:3000"
+                          - exact: "https://centrallixocerto.com.br"
                         allow_methods: "POST, OPTIONS"
                         allow_headers: "keep-alive, user-agent, cache-control, content-type, x-grpc-web, grpc-timeout, authorization, x-user-agent, x-id-sessao"
                         expose_headers: "grpc-status, grpc-message, grpc-encoding"
@@ -58,7 +59,7 @@ static_resources:
                       port_value: 50051
 
 admin:
-  access_log_path: /tmp/envoy_admin_access.log
+  access_log_path: /dev/null
   address:
     socket_address:
       address: 0.0.0.0

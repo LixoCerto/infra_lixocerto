@@ -21,7 +21,7 @@ services:
     user: "999:1000"
     restart: unless-stopped
     env_file:
-      - ../api_lixocerto/.env
+      - ./.env.redis
     command:
       [
         "sh",
