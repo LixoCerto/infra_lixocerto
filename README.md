@@ -1,140 +1,170 @@
-# Infra Lixo Certo
+# Lixo Certo — Infraestrutura
 
-Projeto responsável pela infraestrutura Docker de desenvolvimento do ecossistema Lixo Certo. A API e o frontend não mantêm Dockerfiles próprios; imagens, gateway e orquestração ficam centralizados aqui.
+Este repositório concentra Docker Compose, imagens, Envoy e scripts operacionais do ecossistema **Lixo Certo**. A stack serve à integração e ao desenvolvimento da aplicação educacional do TCC II; não é uma declaração de que todos os fluxos tenham sido validados em produção.
 
-## Estrutura
+## Visão da arquitetura
+
+```text
+Navegador
+   │
+   ▼
+Frontend React / Nginx :3000
+   │ /api/rpc
+   ▼
+Envoy gRPC-Web :8080
+   │ gRPC
+   ▼
+API NestJS :50051 ─── PostgreSQL externo
+   ├───────────────── Redis
+   └───────────────── MinIO / API compatível com S3
+```
+
+As portas publicadas pelo Compose ficam vinculadas a `127.0.0.1`. A camada TLS e o proxy público, quando utilizados, são responsabilidade do ambiente de hospedagem e não são criados por este Compose.
+
+## Repositórios e estrutura
+
+Os três repositórios precisam estar lado a lado:
+
+```text
+LixoCerto/
+├── api_lixocerto/
+├── frontend_lixocerto/
+└── infra_lixocerto/
+```
+
+Os contextos de build do `compose.yml` apontam para `../api_lixocerto` e `../frontend_lixocerto`; execute os comandos de Compose a partir da pasta `infra_lixocerto`.
 
 ```text
 infra_lixocerto/
 ├── compose.yml
-├── docker/
-│   ├── api.Dockerfile
-│   ├── frontend.Dockerfile
-│   ├── minio-bootstrap.sh
-│   └── envoy.yaml
-├── scripts/
-├── tools/
-└── docs/
+├── docker/       # Dockerfiles, Envoy e bootstrap MinIO
+├── scripts/      # configuração, inicialização, logs, testes e parada
+├── docs/         # arquitetura, automação e procedimentos específicos
+└── PrepararMinio.ps1
 ```
 
-Os contextos de build são os projetos irmãos `api_lixocerto` e `frontend_lixocerto`. O Dockerfile do frontend compila o Vite e entrega apenas arquivos estáticos pelo Nginx; o backend do frontend foi removido.
+## Serviços e perfis
 
-## Responsabilidades
+| Serviço | Função |
+|---|---|
+| `cache-init` / `cache` | Prepara o volume e executa Redis com senha, AOF e healthcheck. |
+| `minio-data-init` / `minio` | Prepara o volume e fornece armazenamento S3 local para evidências. |
+| `minio-bootstrap` | Cria e valida bucket, identidade de aplicação e política; é uma etapa one-shot. |
+| `api` | API NestJS gRPC; conecta-se ao PostgreSQL externo e aos serviços locais. |
+| `gateway` | Envoy converte gRPC-Web do navegador em gRPC para a API. |
+| `frontend` | Bundle React servido por Nginx não privilegiado. |
+| `evidencia-migration` | Ferramenta de manutenção opcional para migração de evidências legadas; não faz parte do perfil normal da aplicação. |
 
-- `cache-init`: inicializa o diretório AOF e ajusta o volume para o UID/GID não-root do Redis (999:1000);
-- `cache`: Redis local protegido por senha, executado como UID/GID 999:1000, com AOF, volume persistente e healthcheck;
-- `minio` e `minio-bootstrap`: armazenamento privado S3 local; o bootstrap provisiona e testa bucket, identidade e permissões antes de permitir a inicialização da API;
-- `api`: API NestJS gRPC como usuário não-root, JWT próprio e PostgreSQL externo; o healthcheck confirma que a porta gRPC está aceitando conexões;
-- `gateway`: Envoy converte gRPC-Web do navegador para gRPC na API;
-- `frontend`: bundle React/Vite servido pelo Nginx, sem Node em runtime e sem banco próprio.
+O perfil padrão contém o Redis. `--profile app` habilita a aplicação integrada. `--profile maintenance` é reservado a procedimentos de manutenção documentados. O PostgreSQL **não** está no Compose; forneça uma instância acessível pela API.
 
-A autenticação é própria da API. Não há Keycloak, OIDC ou Mailpit no Compose atual.
+## Requisitos
 
-## Pré-requisitos
+- Docker Engine ou Docker Desktop com Docker Compose v2;
+- PowerShell para os scripts `.ps1` incluídos; os comandos diretos de Compose podem ser executados no shell do sistema;
+- os três repositórios clonados como pastas irmãs;
+- PostgreSQL de desenvolvimento/teste acessível antes de iniciar a API.
 
-É necessário ter Docker Desktop com Docker Compose v2 e os três projetos clonados como pastas irmãs:
+## Preparar a configuração local
 
-```text
-G:\LixoCerto\infra_lixocerto
-G:\LixoCerto\api_lixocerto
-G:\LixoCerto\frontend_lixocerto
-```
-
-A API deve possuir `.env` privado com PostgreSQL, Redis, JWT e e-mail. O frontend deve possuir seu próprio `.env` com `VITE_API_BASE_URL`. A infraestrutura não possui `.env` próprio: o Compose referencia diretamente os dois arquivos dos projetos irmãos. A conexão e as credenciais do PostgreSQL não podem ser geradas pelo projeto; configure-as a partir dos exemplos, sem versionar os arquivos reais.
-
-Em um clone novo, crie os arquivos privados somente se ainda não existirem e preencha os valores de desenvolvimento:
+Crie os arquivos de configuração privados somente se ainda não existirem, usando os exemplos dos repositórios correspondentes:
 
 ```powershell
-if (-not (Test-Path ..\api_lixocerto\.env)) { Copy-Item ..\api_lixocerto\.env.exemplo ..\api_lixocerto\.env }
-if (-not (Test-Path ..\frontend_lixocerto\.env)) { Copy-Item ..\frontend_lixocerto\.env.exemplo ..\frontend_lixocerto\.env }
-notepad ..\api_lixocerto\.env
-notepad ..\frontend_lixocerto\.env
+if (-not (Test-Path ..\api_lixocerto\.env)) {
+  Copy-Item ..\api_lixocerto\.env.exemplo ..\api_lixocerto\.env
+}
+if (-not (Test-Path ..\frontend_lixocerto\.env)) {
+  Copy-Item ..\frontend_lixocerto\.env.exemplo ..\frontend_lixocerto\.env
+}
 ```
 
-Não compartilhe esses arquivos nem os adicione ao Git. O banco PostgreSQL deve estar disponível na rede do Docker antes de iniciar a aplicação.
+Preencha os valores do banco, Redis, JWT, e-mail e origens autorizadas no `.env` privado da API. No `.env` do frontend, `VITE_API_BASE_URL` deve ser `/api/rpc` para a stack Docker. Se o botão Google for usado, configure também o Client ID web público em `VITE_GOOGLE_CLIENT_ID` e o mesmo Client ID em `GOOGLE_OAUTH_CLIENT_ID` na API.
 
-## Configuração e execução
+O script `scripts/configurar-desenvolvimento.ps1` valida os arquivos principais e cria `./.env.redis` com somente `REDIS_PASSWORD`, sem mostrar a senha. Ao iniciar a aplicação, `PrepararMinio.ps1` cria `./.env.minio-root` e `./.env.storage-app` se ambos estiverem ausentes. Se apenas um dos dois existir, o script para para não sobrescrever uma configuração parcial.
 
-No PowerShell, a partir de `G:\LixoCerto\infra_lixocerto`:
+**Nunca versione `.env`, `.env.redis`, `.env.minio-root` ou `.env.storage-app`.** `VITE_*` é configuração pública incorporada ao bundle; não coloque segredos nessas variáveis.
+
+## Inicialização integrada
+
+A partir da pasta `infra_lixocerto`, no PowerShell:
 
 ```powershell
-.\scripts\configurar-desenvolvimento.ps1
 .\scripts\iniciar.ps1 -Aplicacao
 ```
 
-Na primeira execução, `iniciar.ps1 -Aplicacao` gera os arquivos locais MinIO (sem sobrescrever configurações existentes), constrói as imagens, inicia MinIO, força uma nova execução do bootstrap e verifica bucket privado e operações S3 da API **antes** de iniciar API/gateway/frontend. Se o bootstrap falhar, a API não é iniciada. O PostgreSQL continua externo e as migrations/seeds permanecem uma etapa explícita, documentada abaixo; não execute esse fluxo apontando para uma base de produção.
+O inicializador prepara a configuração, constrói as imagens e executa o bootstrap do MinIO antes da API. Em seguida, inicia Redis, aguarda a API ficar saudável e sobe Envoy e frontend. Se o bootstrap falhar, a API não é iniciada.
 
-O `compose.yml` carrega automaticamente `..\api_lixocerto\.env` para a API e o Redis, e o Dockerfile do frontend carrega `..\frontend_lixocerto\.env` durante o build do Vite. Para o primeiro start, use o inicializador em vez de iniciar serviços individualmente: ele confirma o resultado do bootstrap antes de subir a API.
-
-O gateway só inicia depois que a API passa no healthcheck gRPC. Durante uma inicialização fria, consulte `docker compose -f compose.yml ps` e aguarde `healthy` para a API antes de investigar falhas de conexão; o healthcheck permite até três minutos para a primeira inicialização e não reinicia nem encerra a API.
-
-## Migrações e seeds do banco
-
-O Compose não aplica migrations automaticamente. Depois de atualizar o código, confirme primeiro que o `.env` privado da API aponta para o banco de desenvolvimento correto. Aplique a sequência abaixo: build das imagens alteradas, migrations/seeds em containers one-off da imagem nova e, só então, recriação da API/frontend. Os comandos de banco usam as mesmas variáveis do `.env` da API:
-
-```powershell
-docker compose -f compose.yml --profile app build --no-cache api frontend
-docker compose -f compose.yml --profile app run --rm --no-deps api node_modules/.bin/sequelize-cli db:migrate --config configuracao_sequelize.cjs --migrations-path banco/migracoes
-docker compose -f compose.yml --profile app run --rm --no-deps api node_modules/.bin/sequelize-cli db:seed:all --config configuracao_sequelize.cjs --seeders-path banco/dados_iniciais
-docker compose -f compose.yml --profile app up -d --no-deps --force-recreate api frontend
-```
-
-O Dockerfile da API inclui migrations e seeds na imagem para esse uso manual. Os seeds devem ser idempotentes; não execute `db:seed:undo:all` nem migrations `down` para aplicar uma atualização normal.
-
-## Fluxo integrado
-
-```text
-http://localhost:3000
-        ↓
-frontend Nginx :8080 → /api/rpc → Envoy :8080 → API gRPC :50051
-                                                    ↓
-                                          PostgreSQL externo + Redis
-                                                    ↑
-                              JWT próprio / papéis / permissões
-```
-
-O frontend utiliza somente `VITE_API_BASE_URL=/api/rpc`. Os segredos e credenciais permanecem exclusivamente no `.env` da API.
-
-## Automação local e Postman
-
-Para subir o ambiente, preparar os contratos, executar smoke tests e mostrar o estado:
+Para preparar arquivos de apoio e executar verificações gRPC:
 
 ```powershell
 .\scripts\iniciar.ps1 -Aplicacao -PrepararPostman -SmokeTests
 ```
 
-A preparação copia a definição raiz Protobuf, o ambiente e o catálogo de 26 métodos para `%USERPROFILE%\Postman\files\lixo-certo`. Ela não copia a coleção HTTP histórica. No Postman, use **New > gRPC**, `grpc://{{grpc_host}}` e **Save As** para criar a coleção nativa.
-
-Para preencher o ambiente local do Postman usando a autenticação própria:
+O smoke autenticado é opcional e requer uma conta de teste e as variáveis de runner documentadas pelo script:
 
 ```powershell
-.\scripts\obter-token-postman.ps1 -Email 'usuario@exemplo.test'
+.\scripts\iniciar.ps1 -Aplicacao -SmokeTests -SmokeAutenticado
 ```
 
-Em requisições protegidas, mantenha o metadado:
-
-```text
-authorization: Bearer {{jwt_token}}
-```
-
-## Segurança
-
-As portas são vinculadas somente a `127.0.0.1`; os containers usam `no-new-privileges` e capabilities reduzidas. O frontend recebe apenas a variável pública `VITE_API_BASE_URL`; o Redis recebe o arquivo da API para obter sua senha de desenvolvimento. O server reflection deve ficar desabilitado em produção.
-
-O PostgreSQL externo não é criado nem destruído pelo Compose; migrations são sempre manuais. Não execute migrations de desenvolvimento nem testes destrutivos contra a base principal.
-
-O serviço `cache` recebe `REDIS_PASSWORD` exclusivamente de `../api_lixocerto/.env` por meio de `env_file`. O serviço `cache-init` não recebe nem precisa de credenciais: ele somente prepara as permissões do volume persistente.
-
-## Parada e limpeza
+Para subir somente o Redis local, sem iniciar a aplicação:
 
 ```powershell
+.\scripts\iniciar.ps1
+```
+
+## Portas locais
+
+| Serviço | Endereço no host | Observação |
+|---|---|---|
+| Frontend | `http://127.0.0.1:3000` | Nginx com SPA |
+| Envoy | `http://127.0.0.1:8080` | Endpoint gRPC-Web usado pelo Vite local |
+| API | `127.0.0.1:50051` | gRPC |
+| Redis | `127.0.0.1:6379` | Protegido por senha |
+| MinIO API | `127.0.0.1:9000` | Armazenamento S3 local |
+| MinIO Console | `http://127.0.0.1:9001` | Console administrativo local |
+
+## Banco de dados e migrations
+
+O Compose não inicializa, migra nem remove PostgreSQL. Antes de rodar uma migration, confirme que o `.env` aponta para a base correta e faça backup. Em desenvolvimento, uma migration pode ser executada manualmente a partir do repositório de infraestrutura:
+
+```powershell
+docker compose -f compose.yml --profile app build api
+docker compose -f compose.yml --profile app run --rm --no-deps api node_modules/.bin/sequelize-cli db:migrate --config configuracao_sequelize.cjs --migrations-path banco/migracoes
+```
+
+Os seeds também são manuais e devem ser executados apenas em bases próprias de desenvolvimento/homologação. Não use `down -v`, migrations de desenvolvimento ou seeds contra uma base importante sem um procedimento de backup e revisão.
+
+A migração de evidências legadas é outro procedimento, separado da inicialização normal. Consulte [`docs/MIGRACAO_MINIO_EVIDENCIAS.md`](docs/MIGRACAO_MINIO_EVIDENCIAS.md) antes de usar o perfil `maintenance`.
+
+## Operação cotidiana
+
+```powershell
+.\scripts\status.ps1
+.\scripts\logs.ps1 -Servico api
 .\scripts\parar.ps1
 ```
 
-Para logs:
+Os comandos Compose equivalentes, a partir da pasta de infraestrutura, incluem:
 
-```powershell
-.\scripts\logs.ps1 -Servico api
+```bash
+docker compose --profile app ps
+docker compose --profile app logs -f api
+docker compose --profile app down
 ```
 
-Não use `docker compose down -v` quando não quiser remover o volume local do Redis.
+`down` preserva os volumes nomeados. Não acrescente `-v` a menos que a remoção permanente dos dados locais seja intencional.
+
+## Segurança e limitações
+
+- Os serviços são publicados no loopback; não exponha diretamente portas internas à Internet.
+- O Redis recebe apenas o arquivo local `./.env.redis`; o frontend recebe apenas configuração pública.
+- MinIO e credenciais da aplicação permanecem em arquivos locais ignorados pelo Git.
+- gRPC reflection deve permanecer desativada fora dos cenários em que for intencionalmente necessária.
+- As migrations são uma etapa explícita; o Compose não as executa automaticamente.
+- Testes de healthcheck e smoke não equivalem a auditoria de segurança, teste ponta a ponta com participantes ou garantia de prontidão para produção.
+
+## Documentação relacionada
+
+- [Arquitetura da infraestrutura](docs/ARQUITETURA.md)
+- [Automação local](docs/AUTOMACAO_LOCAL.md)
+- [Migração de evidências para MinIO](docs/MIGRACAO_MINIO_EVIDENCIAS.md)
+- [Referências gRPC/Postman](docs/REFERENCIAS_POSTMAN_GRPC.md)
