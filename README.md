@@ -1,6 +1,6 @@
-# Lixo Certo — Infraestrutura
+# LixoCerto — Infraestrutura
 
-Este repositório concentra Docker Compose, imagens, Envoy e scripts operacionais do ecossistema **Lixo Certo**. A stack serve à integração e ao desenvolvimento da aplicação educacional do TCC II; não é uma declaração de que todos os fluxos tenham sido validados em produção.
+Este repositório concentra Docker Compose, imagens, Envoy e scripts operacionais da plataforma **LixoCerto**. A stack apoia desenvolvimento e integração entre os serviços; sua presença não declara prontidão para produção nem validação de todos os fluxos no ambiente de hospedagem.
 
 ## Visão da arquitetura
 
@@ -33,6 +33,8 @@ LixoCerto/
 ```
 
 Os contextos de build do `compose.yml` apontam para `../api_lixocerto` e `../frontend_lixocerto`; execute os comandos de Compose a partir da pasta `infra_lixocerto`.
+
+Documentação e instruções de cada componente: [API](https://github.com/LixoCerto/api_lixocerto) · [Frontend web](https://github.com/LixoCerto/frontend_lixocerto).
 
 ```text
 infra_lixocerto/
