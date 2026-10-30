@@ -28,6 +28,18 @@ foreach ($nome in $obrigatoriasApi) {
         throw "$nome não está configurada em $apiEnvPath."
     }
 }
+$redisPassword = Get-EnvValue $apiEnvPath 'REDIS_PASSWORD'
+if ($redisPassword.Contains("`r") -or $redisPassword.Contains("`n")) {
+    throw 'REDIS_PASSWORD não pode conter quebras de linha.'
+}
+$redisPasswordEscaped = $redisPassword.Replace('\', '\\').Replace('"', '\"').Replace('$', '$$')
+$redisEnvPath = Join-Path $infraRoot '.env.redis'
+$redisEnvContent = 'REDIS_PASSWORD="{0}"' -f $redisPasswordEscaped
+[System.IO.File]::WriteAllText(
+    $redisEnvPath,
+    $redisEnvContent + [Environment]::NewLine,
+    [System.Text.UTF8Encoding]::new($false)
+)
 if ([string]::IsNullOrWhiteSpace((Get-EnvValue $frontendEnvPath 'VITE_API_BASE_URL'))) {
     throw 'VITE_API_BASE_URL não está configurada no .env do frontend.'
 }
@@ -35,4 +47,5 @@ if ([string]::IsNullOrWhiteSpace((Get-EnvValue $frontendEnvPath 'VITE_API_BASE_U
 Write-Host 'Ambientes da API e do frontend encontrados e validados.' -ForegroundColor Green
 Write-Host "API: $apiEnvPath"
 Write-Host "Frontend: $frontendEnvPath"
-Write-Host 'A infraestrutura não possui nem cria um .env próprio.' -ForegroundColor Yellow
+Write-Host 'Redis: .env.redis preparado com apenas REDIS_PASSWORD (valor oculto).' -ForegroundColor Green
+Write-Host 'A infraestrutura não mantém um .env geral próprio.' -ForegroundColor Yellow
